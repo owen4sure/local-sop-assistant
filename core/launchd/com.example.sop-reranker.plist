@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- reranker 小服務開機常駐（macOS launchd）。所有 <...> 換成你的真實路徑/埠。 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.sop-reranker</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string><HOME>/ai-sop/reranker-service/reranker.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string><HOME>/ai-sop/reranker-service</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HF_HUB_DISABLE_TELEMETRY</key><string>1</string>
+        <key>PYTHONUNBUFFERED</key><string>1</string>
+        <key>RERANKER_PORT</key><string><RERANK_PORT></string>
+        <key>RERANKER_MODEL</key><string>BAAI/bge-reranker-v2-m3</string>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key><string><HOME>/ai-sop/logs/reranker.out</string>
+    <key>StandardErrorPath</key><string><HOME>/ai-sop/logs/reranker.err</string>
+</dict>
+</plist>

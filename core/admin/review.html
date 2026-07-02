@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP 審核台</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; background:#0f172a; color:#e2e8f0; min-height:100vh; }
+  button { border:none; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; font-weight:600; }
+  button:disabled { opacity:.5; cursor:default; }
+
+  /* ── 登入卡片 ── */
+  #login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .login-card { width:100%; max-width:380px; background:#1e293b; border:1px solid #334155; border-radius:16px; padding:32px 28px; box-shadow:0 20px 50px rgba(0,0,0,.4); }
+  .login-card h1 { font-size:20px; margin:0 0 4px; text-align:center; }
+  .login-card .sub { font-size:12.5px; color:#94a3b8; text-align:center; margin-bottom:22px; }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:12.5px; color:#94a3b8; margin-bottom:6px; }
+  .field input { width:100%; background:#0f172a; border:1px solid #475569; color:#e2e8f0; border-radius:9px; padding:11px 12px; font-size:14px; }
+  .field input:focus { outline:none; border-color:#4f8ef7; }
+  .b-login { width:100%; background:#4f8ef7; color:#fff; padding:11px; font-size:15px; margin-top:6px; }
+  .b-login:hover { background:#3b7de8; }
+  #loginErr { color:#fca5a5; font-size:13px; margin-top:12px; text-align:center; min-height:18px; }
+
+  /* ── 審核台 ── */
+  #app { display:none; }
+  .container { max-width:1180px; margin:0 auto; padding:0 24px 32px; }
+  header { background:#1e293b; border-bottom:1px solid #334155; }
+  .hbar { max-width:1180px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:14px; }
+  .hbar h1 { font-size:18px; margin:0; }
+  .who { margin-left:auto; display:flex; align-items:center; gap:12px; font-size:13.5px; color:#cbd5e1; }
+  .b-logout { background:#334155; color:#e2e8f0; padding:7px 14px; font-size:13px; }
+  .tabs { display:flex; gap:8px; padding:18px 0 0; }
+  .tab { padding:9px 18px; border-radius:10px 10px 0 0; background:#1e293b; cursor:pointer; font-size:14px; }
+  .tab.active { background:#334155; font-weight:600; }
+  .wrap { display:flex; gap:18px; align-items:flex-start; background:#334155; border-radius:0 12px 12px 12px; padding:16px; }
+  .list { flex:0 0 340px; display:flex; flex-direction:column; gap:10px; max-height:calc(100vh - 220px); overflow:auto; }
+  .card { background:#1e293b; border:1px solid #3b4a63; border-radius:10px; padding:12px 14px; cursor:pointer; }
+  .card:hover { border-color:#4f8ef7; }
+  .card.sel { border-color:#4f8ef7; background:#243049; }
+  .card .t { font-weight:600; font-size:14px; margin-bottom:5px; }
+  .card .m { font-size:11.5px; color:#94a3b8; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .op { padding:1px 7px; border-radius:6px; font-size:11px; font-weight:600; }
+  .op-new{background:#14532d;color:#86efac;} .op-modify{background:#78350f;color:#fcd34d;} .op-delete{background:#7f1d1d;color:#fca5a5;}
+  .detail { flex:1; background:#1e293b; border:1px solid #3b4a63; border-radius:10px; padding:20px; min-height:360px; }
+  .empty { color:#64748b; text-align:center; padding:90px 0; }
+  .precheck { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 12px; font-size:13px; margin:10px 0; }
+  .precheck .miss { color:#fcd34d; } .precheck .ok { color:#86efac; }
+  pre.md { background:#0b1220; border:1px solid #334155; border-radius:8px; padding:12px; white-space:pre-wrap; word-break:break-word; font-size:12.5px; line-height:1.6; max-height:360px; overflow:auto; }
+  textarea.md { width:100%; min-height:320px; background:#0b1220; border:1px solid #475569; color:#e2e8f0; border-radius:8px; padding:12px; font-size:12.5px; line-height:1.6; font-family:ui-monospace,monospace; }
+  /* 並排行級 diff（單一捲動容器 → 左右天生同步捲動、同列對齊）*/
+  .sxs-head { display:grid; grid-template-columns:1fr 1fr; gap:0; font-size:13px; color:#94a3b8; margin:8px 0 4px; }
+  .sxs-head > div { padding:0 8px; }
+  .sxs { border:1px solid #334155; border-radius:8px; max-height:440px; overflow:auto; background:#0b1220; font-family:ui-monospace,monospace; font-size:12px; }
+  .sxs-row { display:grid; grid-template-columns:1fr 1fr; }
+  .sxs-c { padding:1px 8px; white-space:pre-wrap; word-break:break-word; line-height:1.55; min-height:1.55em; border-bottom:1px solid #131c2e; }
+  .sxs-c:first-child { border-right:1px solid #334155; }
+  .sxs-c.del { background:rgba(220,38,38,0.28); color:#fee2e2; }
+  .sxs-c.add { background:rgba(22,163,74,0.28); color:#dcfce7; }
+  .sxs-c.blank { background:#0e1626; }
+  .actions { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; align-items:center; }
+  .b-ok{background:#16a34a;color:#fff;} .b-reject{background:#dc2626;color:#fff;}
+  .b-purge{background:transparent;color:#fca5a5;border:1px solid #7f1d1d;padding:6px 12px;font-size:12.5px;}
+  .b-purge:hover{background:#7f1d1d;color:#fff;}
+  .dangerzone{margin-top:14px;padding-top:12px;border-top:1px dashed #475569;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .dangerzone span{font-size:11.5px;color:#94a3b8;flex:1;min-width:200px;}
+  /* 文件健康整理台 */
+  .hz-card{background:#1e293b;border:1px solid #3b4a63;border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+  .hz-top{font-size:13px;margin-bottom:6px;}
+  .hz-sev{padding:1px 7px;border-radius:6px;font-size:11px;font-weight:700;margin-right:4px;}
+  .hz-sev.high{background:#7f1d1d;color:#fca5a5;} .hz-sev.med{background:#78350f;color:#fcd34d;}
+  .hz-docs{font-size:13px;line-height:1.7;margin-bottom:8px;}
+  .hz-ev{background:#0b1220;border:1px solid #334155;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .hz-evh{font-size:11.5px;color:#64748b;margin-bottom:4px;}
+  .hz-seg{font-size:12px;line-height:1.55;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;margin-bottom:4px;max-height:130px;overflow:auto;}
+  .hz-act{display:flex;gap:8px;}
+  .msg { margin-top:10px; font-size:13px; } .msg.ok{color:#86efac;} .msg.err{color:#fca5a5;}
+  input.cmt { flex:1; min-width:160px; background:#0f172a; border:1px solid #475569; color:#e2e8f0; border-radius:8px; padding:9px 11px; font-size:13px; }
+</style>
+</head>
+<body>
+
+<!-- ══════ 登入 ══════ -->
+<div id="login">
+  <div class="login-card">
+    <h1>📋 SOP 審核台</h1>
+    <div class="sub">投稿先進待審，審核者登入後核可才會上架</div>
+    <div class="field">
+      <label>審核者姓名</label>
+      <input id="inName" placeholder="例：王小明" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>審核密碼</label>
+      <input id="inPw" type="password" placeholder="請輸入審核密碼">
+    </div>
+    <button class="b-login" id="btnLogin" onclick="doLogin()">登入</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ══════ 審核台 ══════ -->
+<div id="app">
+  <header>
+    <div class="hbar">
+      <h1>📋 SOP 審核台</h1>
+      <div class="who">
+        <span>👤 審核者：<b id="whoName"></b></span>
+        <button class="b-logout" onclick="logout()">登出</button>
+      </div>
+    </div>
+  </header>
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" data-s="待審" onclick="switchTab('待審')">🕒 待審</div>
+      <div class="tab" data-s="退回" onclick="switchTab('退回')">↩️ 退回區</div>
+      <div class="tab" data-s="已上架" onclick="switchTab('已上架')">✅ 已上架</div>
+      <div class="tab" data-s="健康" onclick="switchTab('健康')">🩺 健康整理台</div>
+    </div>
+    <div class="wrap">
+      <div class="list" id="list"></div>
+      <div class="detail" id="detail"><div class="empty">← 從左側選一筆投稿</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 健檢台原地編輯（沿用「直接更新」端點 + 二次確認）-->
+<div id="healthEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeHealthEdit()">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;width:920px;max-width:96vw;height:86vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:14px 18px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:10px;">
+      <b style="font-size:15px;">✏️ 編輯：<span id="heFile" style="color:#cbd5e1;font-weight:500;"></span></b>
+      <span style="font-size:11.5px;color:#64748b;">改完按「更新」會二次確認；走既有「直接更新」（寫回 sop-files + git + 重索引）</span>
+      <button onclick="closeHealthEdit()" style="margin-left:auto;background:#334155;color:#e2e8f0;border:none;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;">✕</button>
+    </div>
+    <textarea id="heText" style="flex:1;width:100%;border:none;outline:none;resize:none;padding:14px 18px;background:#0b1220;color:#e2e8f0;font-family:ui-monospace,monospace;font-size:12.5px;line-height:1.7;"></textarea>
+    <div style="padding:12px 18px;border-top:1px solid #334155;display:flex;align-items:center;gap:12px;">
+      <span id="heMsg" style="font-size:13px;"></span>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button onclick="closeHealthEdit()" style="background:#334155;color:#e2e8f0;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">取消</button>
+        <button onclick="saveHealthEdit()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">💾 更新</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── session 憑證（僅存記憶體）──
+const SESS = { name: '', pw: '' };
+let CUR = '待審', SEL = null;
+
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const opCls = o => ({new:'op-new',modify:'op-modify',delete:'op-delete'}[o]||'op-new');
+const opTxt = o => ({new:'新增',modify:'修改',delete:'刪除'}[o]||o);
+const fmtT = ms => { const d=new Date(ms); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+
+// ── 登入：用「需要密碼的端點」驗證（POST 不存在的 id → 密碼錯 403、密碼對 404；無副作用）──
+async function doLogin() {
+  const name = document.getElementById('inName').value.trim();
+  const pw = document.getElementById('inPw').value;
+  const err = document.getElementById('loginErr');
+  const btn = document.getElementById('btnLogin');
+  if (!name) { err.textContent = '請輸入審核者姓名'; return; }
+  if (!pw) { err.textContent = '請輸入審核密碼'; return; }
+  err.textContent = ''; btn.disabled = true; btn.textContent = '驗證中...';
+  try {
+    const r = await fetch('/pending/0/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Review-Password': pw },
+      body: JSON.stringify({}),
+    });
+    if (r.status === 403) { err.textContent = '密碼錯誤，請重新輸入'; document.getElementById('inPw').value=''; document.getElementById('inPw').focus(); return; }
+    // 200/404 等＝密碼正確（404 為查無該 id，正常）
+    SESS.name = name; SESS.pw = pw;
+    document.getElementById('whoName').textContent = name;
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    switchTab('待審');
+  } catch (e) {
+    err.textContent = '無法連線後端：' + e.message;
+  } finally { btn.disabled = false; btn.textContent = '登入'; }
+}
+function logout() {
+  SESS.name = ''; SESS.pw = ''; SEL = null;
+  document.getElementById('inPw').value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('inName').focus();
+}
+// Enter 送出
+document.getElementById('inPw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('inName').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('inPw').focus(); });
+window.addEventListener('load', () => document.getElementById('inName').focus());
+
+// ── 審核台 ──
+let LIST_SIG = null;
+function switchTab(s){
+  CUR=s; SEL=null; LIST_SIG=null;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.s===s));
+  const listEl=document.getElementById('list');
+  if(s==='健康'){ listEl.style.display='none'; loadHealth(); return; }
+  listEl.style.display=''; document.getElementById('detail').innerHTML='<div class="empty">← 從左側選一筆投稿</div>'; loadList(true);
+}
+
+// ── 文件健康整理台（唯讀；同頁同密碼）──
+async function loadHealth(){
+  const el=document.getElementById('detail');
+  el.innerHTML='<div class="empty">健檢中…</div>';
+  let data;
+  try{
+    const r=await fetch('/sop-health',{headers:{'X-Review-Password':SESS.pw}});
+    if(r.status===403){ logout(); return; }
+    data=await r.json(); if(!r.ok) throw new Error(data.error||('HTTP '+r.status));
+  }catch(e){ el.innerHTML='<div class="msg err">健檢失敗：'+esc(e.message)+'</div>'; return; }
+  const flags=data.flags||[];
+  let h=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h2 style="margin:0">🩺 文件健康整理台</h2>
+      <button class="b-ghost" onclick="scanContradictions()" id="scanBtn" style="margin-left:auto">🔍 掃描矛盾</button>
+    </div>
+    <div style="color:#94a3b8;font-size:12.5px;margin:6px 0 14px">已上架 ${data.fileCount} 份；近似重複門檻 ${data.dupThreshold}%。唯讀健檢——只標記、不改檔；每條都附原文證據。點「🛠 去處理」可原地編輯該文件、二次確認後直接更新（有 git 版本可復原）。${data.contraScanned?'':'　矛盾偵測較慢，需手動按「🔍 掃描矛盾」。'}</div>`;
+  const dup=flags.filter(f=>f.type==='duplicate'), ref=flags.filter(f=>f.type==='reference'), con=flags.filter(f=>f.type==='contradiction');
+  if(!flags.length){ h+='<div class="empty">✅ 目前沒有偵測到問題（矛盾偵測請按上方「🔍 掃描矛盾」）</div>'; el.innerHTML=h; return; }
+  if(con.length) h+=`<h3 style="font-size:14px;margin:14px 0 6px">⚠️ 可能自相矛盾（${con.length}）</h3>`+con.map(contradictionCard).join('');
+  if(dup.length) h+=`<h3 style="font-size:14px;margin:18px 0 6px">🔁 同名／近似重複（${dup.length}）</h3>`+dup.map(dupCard).join('');
+  if(ref.length) h+=`<h3 style="font-size:14px;margin:18px 0 6px">🔗 引用走鐘（${ref.length}）</h3>`+ref.map(refCard).join('');
+  el.innerHTML=h;
+}
+function docTag(d){ return `${esc(d.title)} <span style="color:#64748b;font-size:11.5px">（${esc(d.name)}｜owner ${esc(d.owner)}｜v ${esc(d.version)}）</span>`; }
+// 「去處理」＝原地開該份文件編輯（每份一顆）＋「這不是問題」
+function flagActions(f){
+  const edits=f.docs.map(d=>`<button class="b-ghost" onclick="openHealthEdit('${esc(d.name)}')" title="原地編輯、二次確認後直接更新">🛠 編輯《${esc(d.title)}》</button>`).join('');
+  return `<div class="hz-act">${edits}<button class="b-purge" onclick="dismissFlag('${esc(f.id)}')">這不是問題</button></div>`;
+}
+function dupCard(f){
+  let ev='';
+  if(f.evidence) ev=`<div class="hz-ev"><div class="hz-evh">最相似段落（${f.evidence.segScore}%）</div>
+    <div class="hz-seg"><b>${esc(f.evidence.aDoc)}：</b>${esc(f.evidence.a)}</div>
+    <div class="hz-seg"><b>${esc(f.evidence.bDoc)}：</b>${esc(f.evidence.b)}</div></div>`;
+  return `<div class="hz-card">
+    <div class="hz-top"><span class="hz-sev high">高</span> 相似度 <b>${f.similarity}%</b>${f.sameTitle?' ・<span class="miss">標題同名</span>':''}</div>
+    <div class="hz-docs">${docTag(f.docs[0])}<br>${docTag(f.docs[1])}</div>
+    ${ev}${flagActions(f)}</div>`;
+}
+function refCard(f){
+  return `<div class="hz-card">
+    <div class="hz-top"><span class="hz-sev med">中</span> 可能引用到不存在/已改名的「<b>${esc(f.ref)}</b>」</div>
+    <div class="hz-docs">${docTag(f.docs[0])}</div>
+    <div class="hz-ev"><div class="hz-evh">原文</div><div class="hz-seg">${esc(f.evidence.line)}</div></div>
+    ${flagActions(f)}</div>`;
+}
+function contradictionCard(f){
+  return `<div class="hz-card" style="border-color:#7f1d1d">
+    <div class="hz-top"><span class="hz-sev high">高</span> 可能自相矛盾：${esc(f.evidence.why||'')}</div>
+    <div class="hz-docs">${docTag(f.docs[0])}<br>${docTag(f.docs[1])}</div>
+    <div class="hz-ev"><div class="hz-evh">互相衝突的原文句</div>
+      <div class="hz-seg"><b>${esc(f.evidence.aDoc)}：</b>${esc(f.evidence.a)}</div>
+      <div class="hz-seg"><b>${esc(f.evidence.bDoc)}：</b>${esc(f.evidence.b)}</div></div>
+    ${flagActions(f)}</div>`;
+}
+let scanPoll=null;
+async function scanContradictions(){
+  if(!confirm('開始掃描自相矛盾？\nAI 會逐一比對每組相似段落，文件多時可能需數分鐘。\n（掃描期間問答會變慢，因為共用同一顆模型）')) return;
+  const btn=document.getElementById('scanBtn'); if(btn){ btn.disabled=true; btn.textContent='⏳ 啟動掃描…'; }
+  try{
+    const r=await fetch('/sop-health/contradictions/scan',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Password':SESS.pw},body:JSON.stringify({})});
+    if(r.status===403){ logout(); return; }
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||r.status);
+    pollScan(); // 背景跑，改用輪詢看進度
+  }catch(e){ alert('掃描啟動失敗：'+e.message); if(btn){ btn.disabled=false; btn.textContent='🔍 掃描矛盾'; } }
+}
+function pollScan(){
+  const btn=document.getElementById('scanBtn');
+  if(scanPoll){ clearInterval(scanPoll); scanPoll=null; }
+  const tick=async()=>{
+    try{
+      const r=await fetch('/sop-health/contradictions/status',{headers:{'X-Review-Password':SESS.pw}});
+      if(r.status===403){ if(scanPoll){clearInterval(scanPoll);scanPoll=null;} logout(); return; }
+      const s=await r.json();
+      if(s.running){ if(btn){ btn.disabled=true; btn.textContent=`⏳ 掃描中 ${s.scanned}/${s.total}…`; } return; }
+      if(scanPoll){ clearInterval(scanPoll); scanPoll=null; }
+      if(btn){ btn.disabled=false; btn.textContent='🔍 掃描矛盾'; }
+      await loadHealth();
+      if(s.error) alert('掃描中斷：'+s.error);
+      else alert(`掃描完成：候選 ${s.total} 對，判定矛盾 ${s.found} 條`);
+    }catch(e){ /* 暫時性錯誤，下一輪再試 */ }
+  };
+  tick(); // 立即先問一次（小文件庫可能秒完）
+  scanPoll=setInterval(tick, 2000);
+}
+// 原地編輯（沿用「直接更新」端點 + 二次確認）
+let HE_FILE=null, HE_LOADED=false;
+async function openHealthEdit(name){
+  HE_FILE=name; HE_LOADED=false;
+  document.getElementById('heFile').textContent=name;
+  document.getElementById('heText').value='載入中…';
+  document.getElementById('heText').disabled=true;
+  document.getElementById('heMsg').textContent='';
+  document.getElementById('healthEditModal').style.display='flex';
+  try{
+    const r=await fetch('/sop-files'); const {files=[]}=await r.json();
+    const f=files.find(x=>x.name===name);
+    if(f){
+      document.getElementById('heText').value=f.content;
+      document.getElementById('heText').disabled=false;
+      HE_LOADED=true;
+    }else{
+      document.getElementById('heText').value='';
+      document.getElementById('heMsg').textContent='找不到該文件，無法編輯';
+    }
+  }catch(e){
+    document.getElementById('heText').value='';
+    document.getElementById('heMsg').textContent='載入失敗，無法編輯：'+e.message;
+  }
+}
+function closeHealthEdit(){ document.getElementById('healthEditModal').style.display='none'; HE_FILE=null; HE_LOADED=false; }
+async function saveHealthEdit(){
+  if(!HE_FILE) return;
+  if(!HE_LOADED){ const m=document.getElementById('heMsg'); m.textContent='❌ 原文尚未載入成功，為避免覆蓋請關閉重開'; m.style.color='#fca5a5'; return; }
+  const content=document.getElementById('heText').value;
+  const msg=document.getElementById('heMsg');
+  if(!confirm(`確定更新《${HE_FILE}》？\n會直接寫回知識庫並重新索引（有 git 版本可復原）。`)) return;
+  msg.textContent='更新中…'; msg.style.color='#94a3b8';
+  try{
+    const r=await fetch('/sop-files',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Password':SESS.pw},body:JSON.stringify({filename:HE_FILE,content,editor:SESS.name})});
+    if(r.status===403){ logout(); return; }
+    if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.error||r.status); }
+    msg.textContent='✓ 已更新並重新索引'; msg.style.color='#86efac';
+    setTimeout(()=>{ closeHealthEdit(); loadHealth(); }, 1000);
+  }catch(e){ msg.textContent='❌ '+e.message; msg.style.color='#fca5a5'; }
+}
+async function dismissFlag(id){
+  if(!confirm('標記為「這不是問題」？之後健檢不再列出此條。')) return;
+  try{
+    const r=await fetch('/sop-health/dismiss',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Password':SESS.pw},body:JSON.stringify({flagId:id})});
+    if(r.status===403){ logout(); return; }
+    if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.error||r.status); }
+    loadHealth();
+  }catch(e){ alert('❌ '+e.message); }
+}
+
+// 清單簽章：id+status+建立/決議時間 → 變了才重渲染（沒變不動、不閃）
+function listSig(items){ return items.map(p=>`${p.id}:${p.status}:${p.decided_at||0}:${p.created_at}:${(p.precheck&&p.precheck.badge)||''}`).join('|'); }
+
+// force=true 一定重渲染（切分頁/動作後）；force=false 為背景輪詢，只有簽章變了才動。
+// 只更新左側 #list，永遠不碰 #detail（使用者正在看/編輯的內容不受影響）。
+async function loadList(force){
+  let pending = [];
+  try { const r = await fetch('/pending?status='+encodeURIComponent(CUR), {headers:{'X-Review-Password':SESS.pw}}); if(!r.ok) return; ({ pending=[] } = await r.json()); }
+  catch(e){ return; } // 背景輪詢失敗就安靜略過，不動畫面
+  const sig = listSig(pending);
+  if(!force && sig === LIST_SIG) return; // 沒變 → 什麼都不做
+  LIST_SIG = sig;
+  const el = document.getElementById('list');
+  if(!pending.length){ el.innerHTML='<div class="empty" style="padding:40px 0">（無資料）</div>'; return; }
+  el.innerHTML = pending.map(p=>`
+    <div class="card ${SEL===p.id?'sel':''}" onclick="openDetail(${p.id})">
+      <div class="t">${(p.precheck&&p.precheck.badge)||''} ${esc(p.title)}</div>
+      <div class="m">
+        <span class="op ${opCls(p.op)}">${opTxt(p.op)}</span>
+        <span>${esc(p.type||'')}</span>
+        <span>👤 ${esc(p.submitter||'—')}</span>
+        <span>${fmtT(p.created_at)}</span>
+        ${p.source?`<span>來源:${esc(p.source)}</span>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function dupLine(pc){
+  if(pc.duplicates && pc.duplicates.length){
+    return '<br>'+(pc.dupFlag?'<span class="miss">⚠ 疑似重複既有文件：</span>':'與其他文件較相似：')
+      + pc.duplicates.map(d=>`${esc(d.doc.replace(/\.md$/,''))} (${(d.score*100).toFixed(0)}%)`).join('、');
+  }
+  return '';
+}
+function precheckHtml(pc){
+  if(!pc) return '';
+  let h = '<div class="precheck"><b>AI 預檢 '+(pc.badge||'')+'</b>'
+        + (pc.docType?` <span style="color:#64748b;font-size:12px">[${esc(pc.docType)}]</span>`:'');
+  if(pc.op==='modify'){
+    // 修改：看「改了什麼」，不套七段/不跟自己比
+    h += '<br><b>變更摘要：</b>'+esc(pc.changeSummary||'—');
+    if(pc.targetMissing) h += '<br><span class="miss">⚠ 找不到原檔（可能已改名或刪除）→ 核准會「新建一份」，不是更新原文件</span>';
+    h += dupLine(pc);
+    return h+'</div>';
+  }
+  // op=new / delete
+  if(pc.template && !pc.template.na){
+    h += '<br>' + (pc.template.complete ? '<span class="ok">✓ 七段結構完整</span>'
+      : '<span class="miss">⚠ 缺少段落：'+esc((pc.template.missing||[]).join('、'))+'</span>');
+  } else if(pc.docType && pc.docType!=='SOP'){
+    h += `<br><span class="ok">✓ ${esc(pc.docType)} 類型（不套用 SOP 七段）</span>`;
+  }
+  if(pc.content){
+    h += '<br>' + (pc.content.substantial ? '<span class="ok">✓ 內容有實質</span>'
+      : '<span class="miss">⚠ 內容過於簡略／多為佔位：'+esc((pc.content.issues||[]).join('；'))+'</span>');
+  }
+  if(pc.op==='new' && pc.nameCollision) h += '<br><span class="miss">⚠ 已存在同名文件 → 核准此「新增」會覆蓋既有內容（可能不是你要的）</span>';
+  h += pc.duplicates && pc.duplicates.length ? dupLine(pc) : '<br><span class="ok">✓ 無明顯重複</span>';
+  return h+'</div>';
+}
+// 行級 diff：新版每行不在舊版→綠底(新增)；舊版有新版無→紅底列在後(刪除)。唯讀對照。
+// LCS 逐行比對 → ops（eq/del/ins）
+function lcsDiff(a, b){
+  const n=a.length, m=b.length;
+  const dp=Array.from({length:n+1},()=>new Int32Array(m+1));
+  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--)
+    dp[i][j] = a[i]===b[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  const ops=[]; let i=0,j=0;
+  while(i<n && j<m){
+    if(a[i]===b[j]){ ops.push({t:'eq',l:a[i],r:b[j]}); i++; j++; }
+    else if(dp[i+1][j] >= dp[i][j+1]){ ops.push({t:'del',l:a[i]}); i++; }
+    else { ops.push({t:'ins',r:b[j]}); j++; }
+  }
+  while(i<n) ops.push({t:'del',l:a[i++]});
+  while(j<m) ops.push({t:'ins',r:b[j++]});
+  return ops;
+}
+// 把 ops 對齊成左右同列：連續的 del/ins 配對成「左舊紅／右新綠」，多的補空白佔位
+function sideBySide(oldT, newT){
+  const ops=lcsDiff(String(oldT||'').split('\n'), String(newT||'').split('\n'));
+  const cell=(txt,cls)=>`<div class="sxs-c ${cls}">${txt==null?'':(esc(txt)||'&nbsp;')}</div>`;
+  let out=''; let k=0;
+  while(k<ops.length){
+    if(ops[k].t==='eq'){ out+=`<div class="sxs-row">${cell(ops[k].l,'')}${cell(ops[k].r,'')}</div>`; k++; continue; }
+    const dels=[], inss=[];
+    while(k<ops.length && ops[k].t!=='eq'){ ops[k].t==='del'?dels.push(ops[k].l):inss.push(ops[k].r); k++; }
+    const len=Math.max(dels.length, inss.length);
+    for(let x=0;x<len;x++){
+      const l=x<dels.length?dels[x]:null, r=x<inss.length?inss[x]:null;
+      out+=`<div class="sxs-row">${cell(l, l==null?'blank':'del')}${cell(r, r==null?'blank':'add')}</div>`;
+    }
+  }
+  return out;
+}
+// 並排檢視 ↔ 編輯新版（textarea）切換；編輯後核准沿用 mdEdit
+function toggleEdit(){
+  const wrap=document.getElementById('sxsWrap'), ta=document.getElementById('mdEdit'), btn=document.getElementById('editToggle');
+  if(!ta) return;
+  const editing = ta.style.display!=='none';
+  ta.style.display = editing?'none':'block';
+  wrap.style.display = editing?'block':'none';
+  btn.textContent = editing?'✏️ 編輯新版':'👁 看差異';
+}
+
+async function openDetail(id){
+  SEL=id; loadList(true); // 重畫清單以更新選中highlight（只動清單，不碰即將載入的細節）
+  const r = await fetch('/pending/'+id, {headers:{'X-Review-Password':SESS.pw}});
+  if(r.status===403){ logout(); return; }
+  const p = await r.json();
+  const el = document.getElementById('detail');
+  let body = `<h2 style="margin:0 0 4px">${(p.precheck&&p.precheck.badge)||''} ${esc(p.title)}</h2>
+    <div class="m" style="font-size:12.5px;color:#94a3b8;margin-bottom:6px">
+      <span class="op ${opCls(p.op)}">${opTxt(p.op)}</span> ${esc(p.type||'')} ｜ 投稿者 ${esc(p.submitter||'—')} ｜ ${fmtT(p.created_at)}
+      ${p.status!=='待審'?` ｜ 狀態 <b>${esc(p.status)}</b>${p.decided_by?'（'+esc(p.decided_by)+'）':''}`:''}
+    </div>`;
+  if(p.comment) body += `<div class="msg err">${CUR==='退回'?'退回意見：':''}${esc(p.comment)}</div>`;
+  body += precheckHtml(p.precheck);
+
+  if(p.op==='delete'){
+    body += `<div class="msg err">⚠ 此為「刪除」投稿，核准後會從知識庫移除 <b>${esc(p.targetFilename)}</b>。</div>`;
+    if(p.currentExists) body += `<h4>目前文件內容</h4><pre class="md">${esc(p.currentMd)}</pre>`;
+    else body += `<div class="msg err">找不到目標文件，可能已不存在。</div>`;
+  } else if(p.op==='modify' && p.currentExists){
+    body += `
+      <div class="sxs-head">
+        <div>現有版本（${esc(p.targetFilename)}）</div>
+        <div>投稿新版本　<button class="b-ghost" id="editToggle" onclick="toggleEdit()" style="padding:3px 10px;font-size:12px;">✏️ 編輯新版</button></div>
+      </div>
+      <div id="sxsWrap" class="sxs">${sideBySide(p.currentMd, p.md)}</div>
+      <textarea class="md" id="mdEdit" style="display:none;margin-top:8px;">${esc(p.md)}</textarea>
+      <div style="font-size:11.5px;color:#94a3b8;margin-top:6px;"><span style="background:rgba(22,163,74,.28);padding:0 4px;border-radius:3px;">綠＝新增</span>　<span style="background:rgba(220,38,38,.28);padding:0 4px;border-radius:3px;">紅＝刪除</span>　左右同列對齊、一起捲動；要改內容按「編輯新版」再核准。</div>`;
+  } else {
+    body += `<h4>內容（可直接編輯後核准）</h4><textarea class="md" id="mdEdit">${esc(p.md)}</textarea>`;
+  }
+
+  const purgeBtn = `<button class="b-purge" onclick="act(${id},'purge')">${CUR==='已上架'?'🗑️ 刪除紀錄（不下架）':'🗑️ 完全刪除'}</button>`;
+  if(CUR==='待審'){
+    body += `<div class="actions">
+      ${p.op==='delete'
+        ? `<button class="b-reject" onclick="act(${id},'approve')">🗑 核准刪除</button>`
+        : `<button class="b-ok" onclick="act(${id},'approve')">✅ 核准上架</button>`}
+      <button class="b-reject" onclick="act(${id},'reject')">↩️ 退回</button>
+      <input class="cmt" id="cmt" placeholder="退回意見（退回時填）">
+    </div>
+    <div class="dangerzone">${purgeBtn}<span>完全刪除＝永久移除這筆投稿紀錄（含內容），無法復原。此筆未上架，不影響任何正式文件。</span></div>
+    <div class="msg" id="amsg"></div>`;
+  } else if(CUR==='退回'){
+    body += `<div class="actions">
+      <button class="b-ghost" onclick="act(${id},'reopen')">↺ 恢復待審</button>
+      ${p.op==='delete'
+        ? `<button class="b-reject" onclick="act(${id},'approve')">🗑 核准刪除</button>`
+        : `<button class="b-ok" onclick="act(${id},'approve')">✅ 核准上架</button>`}
+    </div>
+    <div class="dangerzone">${purgeBtn}<span>完全刪除＝永久移除這筆退回紀錄（含內容），無法復原。此筆未上架，不影響任何正式文件。</span></div>
+    <div class="msg" id="amsg"></div>`;
+  } else if(CUR==='已上架'){
+    body += `<div class="actions">
+      <button class="b-reject" onclick="act(${id},'reopen')">⤺ 退回審核（下架）</button>
+      <span style="font-size:12px;color:#94a3b8;">下架後檔案移除、/ask 查不到，內容仍保留在待審可重審</span>
+    </div>
+    <div class="dangerzone">${purgeBtn}<span>⚠ 完全刪除只移除「審核紀錄(log)」，<b>不會</b>下架 sop-files/ 的正式文件、/ask 仍查得到。要下架正式文件請用上方「退回審核（下架）」。</span></div>
+    <div class="msg" id="amsg"></div>`;
+  }
+  el.innerHTML = body;
+}
+
+// 各動作的確認文字（防誤按）
+const CONFIRM_TXT = {
+  approve: '確定要「核准上架」嗎？將寫入知識庫並被 AI 檢索。',
+  reject: '確定要「退回」這筆投稿嗎？',
+  reopen_退回: '確定要「恢復待審」嗎？會移回待審分頁重新審核。',
+  reopen_已上架: '確定要「退回審核（下架）」嗎？檔案會從知識庫移除、/ask 不再查到（內容仍保留在待審）。',
+};
+
+async function act(id, kind){
+  // 完全刪除：二次確認（語意依分頁不同）
+  if(kind==='purge'){
+    const live = (CUR==='已上架');
+    const w1 = live
+      ? '⚠ 完全刪除「審核紀錄(log)」？\n\n注意：這只移除這筆紀錄，不會下架 sop-files/ 的正式文件、/ask 仍查得到。\n（要下架正式文件請改用「退回審核（下架）」。）'
+      : '⚠ 完全刪除這筆投稿紀錄（含其內容）？\n\n此筆本來就沒上架，不影響任何正式文件。';
+    if(!confirm(w1)) return;
+    if(!confirm('‼️ 再次確認：此動作會「永久移除」這筆紀錄、無法復原。\n\n確定刪除？')) return;
+  } else {
+    const ckey = kind==='reopen' ? ('reopen_'+CUR) : kind;
+    if(!confirm(CONFIRM_TXT[ckey] || '確定要執行此動作嗎？')) return;
+  }
+
+  const amsg = document.getElementById('amsg');
+  const mdEl = document.getElementById('mdEdit');
+  const cmtEl = document.getElementById('cmt');
+  const payload = { reviewer: SESS.name };
+  if(kind==='approve' && mdEl) payload.md = mdEl.value;
+  if(kind==='reject') payload.comment = cmtEl ? cmtEl.value : '';
+  amsg.className='msg'; amsg.textContent='處理中...';
+  const post = () => fetch(`/pending/${id}/${kind}`, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'X-Review-Password': SESS.pw },
+    body: JSON.stringify(payload),
+  });
+  try{
+    let r = await post();
+    let d = await r.json().catch(()=>({}));
+    if(r.status===403){ amsg.className='msg err'; amsg.textContent='登入憑證失效或密碼錯誤，請重新登入'; setTimeout(logout, 1400); return; }
+    // 撞名/改名孤兒等需要二次確認：後端回 409 + needConfirm，使用者確認後帶旗標重送
+    if(r.status===409 && d.needConfirm){
+      if(!confirm('⚠ '+(d.error||'需要再次確認')+'\n\n按「確定」繼續，「取消」放棄。')){ amsg.className='msg'; amsg.textContent='已取消'; return; }
+      payload[d.needConfirm]=true;
+      r = await post(); d = await r.json().catch(()=>({}));
+      if(r.status===403){ amsg.className='msg err'; amsg.textContent='登入憑證失效或密碼錯誤，請重新登入'; setTimeout(logout, 1400); return; }
+    }
+    if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+    amsg.className='msg ok';
+    if(kind==='approve') amsg.textContent = d.op==='delete' ? '✅ 已刪除並提交版控' : `✅ 已上架${d.edited?'（採用審核者修改版）':''}，已建立索引`;
+    else if(kind==='reject') amsg.textContent = '✅ 已退回，投稿者可於退回區查看';
+    else if(kind==='purge') amsg.textContent = '✅ 已完全刪除此紀錄' + (d.wasStatus==='已上架' ? '（正式文件未動）' : '');
+    else amsg.textContent = d.unpublished ? '✅ 已下架並移回待審（內容仍保留）' : '✅ 已恢復待審';
+    setTimeout(()=>{ document.getElementById('detail').innerHTML='<div class="empty">← 從左側選一筆投稿</div>'; loadList(true); }, 1200);
+  }catch(e){ amsg.className='msg err'; amsg.textContent='❌ '+e.message; }
+}
+
+// 背景自動刷新：每 25 秒抓目前分頁清單，有變動才重畫左側清單（沒變不動、不閃）；
+// 只在已登入(app 顯示中)時跑；只動 #list，絕不碰使用者正在看/編輯的 #detail。
+setInterval(() => {
+  if (!SESS.pw) return;                                   // 未登入不抓
+  if (document.getElementById('app').style.display === 'none') return;
+  if (CUR === '健康') return;                              // 健康整理台不走清單輪詢
+  loadList(false);                                        // 非 force：簽章相同就不重畫
+}, 25000);
+</script>
+</body>
+</html>

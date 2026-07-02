@@ -1,0 +1,135 @@
+{
+  "name": "LINE SOP 問答（純問答，無請假）",
+  "nodes": [
+    {
+      "id": "7cd1d7af-b5a3-47a1-a399-e7bf6becbce9",
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "webhookId": "d4864080-02df-48b9-88a3-127866605481",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sop-ask",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "022fb977-dd2e-4c8d-b632-850bf55dcd18",
+      "name": "立即回應",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        20,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "d182539c-baba-47ac-8af8-50e432b5538d",
+      "name": "處理問題",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const event = $('LINE Webhook').first().json.body.events[0];\nif (!event || !event.message) return [];\nconst source = event.source;\nconst sourceType = source.type;\nconst userId = source.userId || '';\nconst to = sourceType === 'group' ? (source.groupId || source.roomId) : userId;\nconst text = (event.message && event.message.text) || '';\n// 只處理文字訊息；貼圖/圖片等略過\nif (!text.trim()) return [];\n// （選用）只允許特定群組才回答：解開下兩行並填 <LINE_GROUP_ID>\n// const ALLOWED_GROUP = '<LINE_GROUP_ID>';\n// if ((sourceType === 'group' || sourceType === 'room') && (source.groupId || source.roomId) !== ALLOWED_GROUP) return [];\nreturn [{ json: { to, sessionId: userId || to, message: text.trim() } }];"
+      }
+    },
+    {
+      "id": "9eba2341-204a-4abd-b3df-073afdc9ad86",
+      "name": "問 SOP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        460,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3345/ask",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"sessionId\": $json.sessionId, \"message\": $json.message, \"client\": \"line\"} }}",
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "4e950df5-673b-42a0-8763-d5c6416ca4a9",
+      "name": "回覆 LINE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const r = $json || {};\nconst ans = (r.answer || '').trim() || '抱歉，這個問題我在 SOP 文件裡查不到，建議直接詢問主管或補件 🙏';\nconst to = $('處理問題').first().json.to;\nconst TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\nif (to) {\n  await this.helpers.httpRequest({\n    method: 'POST', url: 'https://api.line.me/v2/bot/message/push',\n    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n    body: { to, messages: [{ type: 'text', text: ans }] }\n  });\n}\nreturn [{ json: { sent: true } }];"
+      }
+    }
+  ],
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "立即回應",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "立即回應": {
+      "main": [
+        [
+          {
+            "node": "處理問題",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "處理問題": {
+      "main": [
+        [
+          {
+            "node": "問 SOP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "問 SOP": {
+      "main": [
+        [
+          {
+            "node": "回覆 LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

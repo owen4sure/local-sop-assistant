@@ -1,0 +1,16 @@
+{
+  "name": "sop-service",
+  "version": "1.0.0",
+  "description": "地端 SOP 助理 backend（Express + SQLite + 本機 RAG）",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "reindex": "node -e \"require('./rag').reindexAll().then(n=>{console.log('reindexed',n,'chunks');process.exit(0)})\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "chokidar": "^4.0.3",
+    "express": "^4.21.2"
+  }
+}

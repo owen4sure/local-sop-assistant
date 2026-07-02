@@ -1,0 +1,14 @@
+# 機密 / 本機設定 — 絕不進版控
+.env
+*.env
+.review-password
+*.review-password
+# 依賴 / 產物
+node_modules/
+__pycache__/
+*.pyc
+*.log
+data/            # SQLite（向量/對話/待審）
+core/sop-files/  # 真實 SOP 文件（含個資）— repo 只放 docs-sample 假範例
+# 系統
+.DS_Store

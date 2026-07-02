@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- macOS launchd 範本：開機常駐 backend。Linux 請改用 systemd unit（見下方註解）。
+     所有路徑換成你的 <HOME> / <NODE_PATH>；機密走 .env 或 .review-password，不寫在這裡。 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.sop</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string><NODE_PATH>/node</string>
+        <string><HOME>/sop-service/server.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string><HOME>/sop-service</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string><NODE_PATH>:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>OLLAMA_URL</key>
+        <string>http://127.0.0.1:11434</string>
+        <!-- 其餘設定（PORT/CHAT_*/EMBED_*/REVIEW_PASSWORD…）建議放專案 .env 由程式讀，
+             或在此加更多 <key>/<string> 對；切勿把真實密碼 commit。 -->
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string><HOME>/logs/server.err</string>
+    <key>StandardOutPath</key>
+    <string><HOME>/logs/server.out</string>
+</dict>
+</plist>
+
+<!--
+重啟服務：  launchctl kickstart -k gui/$(id -u)/com.example.sop
+
+reranker 另設一個同型 plist（ProgramArguments 指向 python3 + reranker.py，
+EnvironmentVariables 設 RERANKER_PORT / RERANKER_MODEL）。
+
+── Linux systemd 對照（/etc/systemd/system/sop.service）──
+[Unit]
+Description=SOP backend
+After=network.target
+[Service]
+WorkingDirectory=<HOME>/sop-service
+ExecStart=<NODE_PATH>/node server.js
+EnvironmentFile=<HOME>/sop-service/.env
+Restart=always
+[Install]
+WantedBy=multi-user.target
+-->

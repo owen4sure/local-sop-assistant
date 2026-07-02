@@ -1,0 +1,1756 @@
+{
+  "name": "津日 池道梅（現在版本）",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "099d87c7-0d63-49ae-9ce5-64b2ef326e33",
+      "name": "每日早報",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        29248,
+        18864
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "<GOOGLE_SHEET_ID>",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "5541c4ad-cb4f-4969-8b02-a12f40635d3f",
+      "name": "讀取今日請假",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        29424,
+        18864
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n  const GROUP_ID = '<LINE_GROUP_ID>';\n\n  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));\n  const pad = n => String(n).padStart(2, '0');\n  const fmt = d => d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate());\n  const wd = ['週日','週一','週二','週三','週四','週五','週六'];\n\n  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n  const sunday = new Date(today); sunday.setDate(today.getDate() + ((7 - today.getDay()) % 7)); // 本週日\n\n  const todayStr = fmt(today);\n  const weekStartStr = todayStr;\n  const weekEndStr = fmt(sunday);\n  \n  function getRange(d) {\n    d = String(d || '').trim(); if (!d) return null;\n    if (d.includes('~')) { const a = d.split('~'); return [a[0].trim(), a[1].trim()]; }\n    return [d, d];\n  }\n  function hitsDay(d, dayStr) { const r = getRange(d); return r ? (r[0] <= dayStr && dayStr <= r[1]) : false; }\n  function hitsRange(d, s, e) { const r = getRange(d); return r ? (r[0] <= e && r[1] >= s) : false; }\n\n  const active = rows.filter(r => String(r.json['狀態'] || '').trim() !== 'cancelled');\n  const todayLeaves = active.filter(r => hitsDay(r.json['請假日期'], todayStr));\n  const weekLeaves  = active.filter(r => hitsRange(r.json['請假日期'], weekStartStr, weekEndStr));\n  \n  function line(r) {\n    const name = r.json['申請人'] || '?';\n    const cat = r.json['假別'] || r.json['請假原因'] || '';\n    const date = r.json['請假日期'] || '';\n    const status = String(r.json['狀態'] || '').trim();\n    const tag = status === 'confirmed' ? '✅' : '⏳';\n  \n    // 外出：顯示事由，不顯示時數\n    if (cat === '外出') {\n      const reason = r.json['請假原因'] || '外出';\n      return `・${name}（${date}｜外出：${reason}）`;\n    }\n  \n    // 請假：顯示時數（整天倍數→X天，否則→X小時）\n    const h = Number(r.json['請假時數']);\n    let hStr = '';\n    if (!isNaN(h) && h > 0) hStr = (h % 8 === 0) ? `｜${h / 8}天` : `｜${h}小時`;\n    return `・${name}（${date}｜${cat}${hStr}｜${tag}）`;\n  }\n\n  let msg = `🌅 歐嗨呦！津日 梅池道 早報 📋\\n今天 ${todayStr}（${wd[today.getDay()]}）\\n\\n`;\n  msg += `【今天請假】\\n`;\n  msg += todayLeaves.length ? todayLeaves.map(line).join('\\n') : '今天全員出席 ✨';\n  msg += `\\n\\n【本週 ${weekStartStr}~${weekEndStr}】\\n`;\n  msg += weekLeaves.length ? weekLeaves.map(line).join('\\n') : '這段時間沒有人請假 ✨';\n\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.line.me/v2/bot/message/push',\n    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n    body: { to: GROUP_ID, messages: [{ type: 'text', text: msg }] }\n  });\n  return [{ json: { sent: true, msg } }];"
+      },
+      "id": "278cb002-7914-4bb5-a580-ea19091133b2",
+      "name": "格式化並發送早報",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        29584,
+        18864
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sop-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "adde611c-6cc4-4274-a8f6-ca9bab4dc948",
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        29280,
+        17840
+      ],
+      "webhookId": "4bdda705-7f63-4688-8f19-21e3a3b95a94"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d74eaf1b-18bf-43ee-88d6-5c2cc62df8b2",
+      "name": "立即回應",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        29456,
+        17840
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body.events[0];\n  const source = event.source;\n  const to = source.type === 'group' ? source.groupId : source.userId;\n  const userMessage = event.message.text;\n  const quotedMessageId = event.message.quotedMessageId || null;\n\n  const now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Taipei'}));\n  const pad = n => String(n).padStart(2, '0');\n  const today = now.getFullYear()+'/'+pad(now.getMonth()+1)+'/'+pad(now.getDate());\n  const weekdays = ['週日','週一','週二','週三','週四','週五','週六'];\n  const nowStr = today+' '+pad(now.getHours())+':'+pad(now.getMinutes());\n\n  const holidays = ['01/01','02/28','04/04','05/01','10/10',\n    '02/16','02/17','02/18','02/19','02/20','02/21','04/05','06/19','09/25'];\n\n  const fmt = d => d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate());\n\n  function isOffDay(d) {\n    if (d.getDay()===0||d.getDay()===6) return true;\n    return holidays.includes(pad(d.getMonth()+1)+'/'+pad(d.getDate()));\n  }\n\n  function calcWorkdayRange(start, n) {                                                                                                                                                      \n    let d = new Date(start);\n    while (isOffDay(d)) d.setDate(d.getDate()+1);\n    const s = new Date(d);\n    let count = 1;\n    while (count < n) { d.setDate(d.getDate()+1); if (!isOffDay(d)) count++; }\n    return [s, d];\n  }\n\n  let upcomingHolidays = [];\n  for (let i=0;i<=30;i++) {\n    const d = new Date(now); d.setDate(now.getDate()+i);\n    if (isOffDay(d)) upcomingHolidays.push(`${fmt(d)}(${weekdays[d.getDay()]})`);\n  }\n\n  let dateHint = '';\n  const nDayMatch = userMessage.match(/(\\d+)\\s*天/);                                                                                                                                         \n  if (nDayMatch) {\n    const n = parseInt(nDayMatch[1]);\n    let start;\n    const dm = userMessage.match(/(\\d{1,2})\\/(\\d{1,2})/)||userMessage.match(/(\\d{1,2})月(\\d{1,2})日/);\n    if (dm) {\n      start = new Date(now.getFullYear(), parseInt(dm[1])-1, parseInt(dm[2]));\n      const diffDays = (now - start) / (1000*60*60*24);\n      if (diffDays > 60) start.setFullYear(now.getFullYear()+1);\n    } else if (userMessage.includes('明天')) { start=new Date(now); start.setDate(now.getDate()+1); }\n    else if (userMessage.includes('後天')) { start=new Date(now); start.setDate(now.getDate()+2); }\n    else if (userMessage.includes('下週一')||userMessage.includes('下周一')) {\n      start=new Date(now); start.setDate(now.getDate()+((8-now.getDay())%7||7));\n    } else { start=new Date(now); start.setDate(now.getDate()+1); }\n    const [s,e] = calcWorkdayRange(start, n);\n    const hours = n * 8;\n    dateHint = `\\n💡【系統已預先計算】${n}天工作天結果：${n===1?fmt(s):fmt(s)+'~'+fmt(e)}，時數=${hours}小時，請直接使用。`;\n  }\n\n  const replyHint = quotedMessageId\n    ? '\\n⚠️ 【這則訊息是用 LINE 的回覆功能發送的，表示在修改或補充前一則請假的內容，請對照 Sheet 中最近一筆相符的紀錄進行修改，不要新增。】'\n    : '';\n\n  const inputText = `今天:${today}(${weekdays[now.getDay()]})\n  登記時間:${nowStr}\n  未來30天假日:${upcomingHolidays.join(', ')}\n  LINE 回覆對象:${to}${dateHint}${replyHint}\n\n  LINE 訊息:${userMessage}`;\n\n  return [{ json: { chatInput: inputText, inputText, to, nowStr } }];"
+      },
+      "id": "3d6652be-ad8f-4686-a4ed-5849e18eecd2",
+      "name": "處理輸入",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        29952,
+        18336
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gemma-4-26b-a4b-it-4bit",
+          "mode": "id"
+        },
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "3f3e29e2-9a7b-458a-b99c-a8455893971c",
+      "name": "Gemma 4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        30800,
+        18480
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "vyQoYq9nxFiCiLID",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "你是 請假訊息解析器。只把用戶訊息轉成 JSON，不做任何判斷、不算日期、不查名單。\n\n  只輸出 JSON：\n  {\n    \"intent\": \"register | query | modify | cancel | 外出 | other\",\n    \"query_date\": \"查詢時填範圍詞：今天/明天/6/4/本週/下週/本月/全部，否則 null\",\n    \"items\": [\n      {\"name\":\"姓名原文\",\"date\":\"原始日期詞\",\"new_date\":\"修改時的新日期，否則 null\",\"category\":\"假別或null\",\"hours\":\"純數字或null\",\"reason\":\"原因或null\"}\n    ]\n  }\n\n  intent 判斷（優先序由上到下）：\n  - 含「取消/不請了/銷假」→ cancel\n  - 含「改/改成/改為/改請/更正/變更」→ modify\n  - 含「外出/公出/外勤」且【不含】公假/請假/特休/事假/病假/婚假/喪假 → 外出\n  - 含查詢詞（誰/名單/狀況/有誰/有沒有/了沒/哪些/查/列出/整理/全部/所有/紀錄/清單）→ query\n  - 含人名+請假動作（請假/事假/特休/公假/病假/出公差…）→ register\n  - 其他 → other\n\n  規則：\n  - 「代理人XXX」的 XXX 不是請假人，不要放進 items\n  - name 只能取自「使用者訊息原文」；訊息沒寫人名就填 null，絕對不要從下方請假紀錄 JSON 猜或補出一個人名\n  - 「和」「、」連多人 → items 放多筆\n  - 「出公差」→ category 填「公假」\n  - hours：一小時=1、半天=4、一整天/整天/一天=8、N小時=N、N天=N×8；沒提就 null\n  - modify：date 放「要定位的舊日期」；要改日期時 new_date 放「新日期」(不改日期 new_date 填 null)；改假別/時數放 category/hours。cancel：date 放要取消的那天\n  - 外出：items 放 {name:姓名, reason:外出事由}（不用日期、不用時數）。例「小明外出至郵局寄贈品」→ {name:小明, reason:郵局寄贈品}\n  - query 時 query_date 填範圍詞（今天/明天/6/4/本週/下週/本月/全部）\n  - 絕對不要自己算日期、不要查員工、不要判斷重複\n  - 只輸出 JSON，不要任何其他文字",
+          "maxIterations": 8
+        }
+      },
+      "id": "d74ae50a-23b3-4480-8290-807932374bdb",
+      "name": "文字請假Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        30800,
+        18336
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.events[0].message.type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "18f42bf3-407b-4c44-9e59-7d9901740b5e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "0"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7df77078-a899-4f73-9faa-358f027291b1",
+                    "leftValue": "={{ $json.body.events[0].message.type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        29632,
+        17840
+      ],
+      "id": "6f182c8a-c6ab-4723-8823-078c11b8d7e4",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "=https://api-data.line.me/v2/bot/message/{{ $json.body.events[0].message.id }}/content",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <LINE_CHANNEL_ACCESS_TOKEN>"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        29856,
+        17536
+      ],
+      "id": "209ff907-5ebe-476d-ad1f-ab0b831c84a2",
+      "name": "取得圖片"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $('LINE Webhook').first().json.body.events[0];\n  const source = event.source;\n  const to = source.type === 'group' ? source.groupId : source.userId;\n  const senderId = source.userId;\n  const ALLOWED_GROUP_OCR = '<LINE_GROUP_ID>';\n  if ((source.type === 'group' || source.type === 'room') && (source.groupId || source.roomId) !== ALLOWED_GROUP_OCR) return [];\n\n  const binaryKey = Object.keys($input.first().binary || {})[0];\n  if (!binaryKey) return [];\n  const binaryData = $input.first().binary[binaryKey];\n  const _buf = await this.helpers.getBinaryDataBuffer(0, binaryKey);\n  const base64Image = Buffer.isBuffer(_buf) ? _buf.toString('base64') : (binaryData.data || '');\n  const mimeType = binaryData.mimeType || 'image/jpeg';\n\n  const now = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Taipei'}));\n  const pad = n => String(n).padStart(2, '0');\n  const nowStr = now.getFullYear()+'/'+pad(now.getMonth()+1)+'/'+pad(now.getDate())+\n                 ' '+pad(now.getHours())+':'+pad(now.getMinutes());\n\n  const holidays2026 = [\n    '2026/01/01','2026/02/28','2026/04/04','2026/05/01','2026/10/10',\n    '2026/02/16','2026/02/17','2026/02/18','2026/02/19','2026/02/20','2026/02/21',\n    '2026/04/05','2026/06/19','2026/09/25'\n  ];\n  function isOffDay(d) {\n    if (d.getDay()===0||d.getDay()===6) return true;\n    const key = d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate());\n    return holidays2026.includes(key);\n  }\n  function fmt(d) { return d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate()); }\n\n  function calcWorkHours(startStr, endStr) {\n    if (!startStr || !endStr) return null;\n    const workStart = { h: 8, m: 45 }, workEnd = { h: 17, m: 45 };\n    const lunchStart = { h: 12, m: 0 }, lunchEnd = { h: 13, m: 0 };\n    const toMins = (h, m) => h * 60 + m;\n    function dayWorkMins(dayS, dayE) {\n      const ws = toMins(workStart.h, workStart.m), we = toMins(workEnd.h, workEnd.m);\n      const ls = toMins(lunchStart.h, lunchStart.m), le = toMins(lunchEnd.h, lunchEnd.m);\n      const s = Math.max(dayS, ws), e = Math.min(dayE, we);\n      if (s >= e) return 0;\n      let mins = e - s;\n      const lOverlap = Math.max(0, Math.min(e, le) - Math.max(s, ls));\n      mins -= lOverlap;\n      return Math.max(0, mins);\n    }\n    const parseDateTime = str => {\n      const parts = str.trim().split(' ');\n      const [y, mo, d] = parts[0].split('/').map(Number);\n      const [hh, mm] = (parts[1] || '08:45').split(':').map(Number);\n      return new Date(y, mo - 1, d, hh, mm);\n    };\n    const start = parseDateTime(startStr), end = parseDateTime(endStr);\n    let totalMins = 0, cur = new Date(start);\n    while (cur <= end) {\n      if (!isOffDay(cur)) {\n        const isStartDay = cur.toDateString() === start.toDateString();\n        const isEndDay = cur.toDateString() === end.toDateString();\n        const dayS = isStartDay ? toMins(start.getHours(), start.getMinutes()) : toMins(workStart.h, workStart.m);\n        const dayE = isEndDay ? toMins(end.getHours(), end.getMinutes()) : toMins(workEnd.h, workEnd.m);\n        totalMins += dayWorkMins(dayS, dayE);\n      }\n      cur.setDate(cur.getDate() + 1); cur.setHours(0,0,0,0);\n    }\n    return Math.round(totalMins / 60 * 2) / 2;\n  }\n  function normDT(s) {\n    if (!s) return s;\n    s = String(s).replace(/[-\\.]/g, '/').trim();\n    return s.replace(/(\\d{4}\\/\\d{1,2}\\/\\d{1,2})\\s+(\\d{2})(\\d{2})\\b/, '$1 $2:$3');\n  }\n\n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://127.0.0.1:8000/v1/chat/completions',\n    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <LOCAL_CHAT_API_KEY>' },\n    body: {\n      model: 'gemma-4-26b-a4b-it-4bit',\n      messages: [{\n        role: 'user',\n        content: [\n          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}` } },\n          { type: 'text', text: `這是公司員工請假單截圖，可能有「一筆或多筆」請假紀錄（清單）。請抓出「每一筆」，只回覆以下 JSON，不要任何其他文字：\n  {\"is_leave_form\": true 或 false, \"appearance\":\"從〔表單截圖/紙本表單/純文字/照片/其他〕擇一\", \"reason\":\"若 false 就說明原因\", \"records\":[{\"name\":\"請假人姓名\",\"start\":\"開始日期時間\",\"end\":\"結束日期時間\",\"type\":\"假別\",\"days\":\"扣假天數的數字(沒有就0)\",\"hours\":\"扣假時數的數字(沒有就0)\",\"reason\":\"原因\"}]}\n\n  【先判斷圖片「外觀」appearance，再判 is_leave_form — 嚴格，有疑慮一律 false】\n  appearance 是看「這張圖長什麼樣子」，擇一：\n    · 表單截圖 = 公司請假/HR 系統的畫面（有欄位框、按鈕、系統標題列、表格框線）\n    · 紙本表單 = 拍紙本制式請假單（有表格框線、欄位標籤、簽核欄、公司抬頭/印章）\n    · 純文字 = 整張只是白底黑字、幾行打出來的字（就算把姓名/日期/假別/代理人列得很整齊，也是純文字）\n    · 照片 = 風景、人物、桌布等與單據無關的圖\n    · 其他 = 以上都不是\n  is_leave_form 規則：\n    · 只有 appearance 是「表單截圖」或「紙本表單」、且看起來是真的正式單據 → true\n    · appearance 是「純文字 / 照片 / 其他」 → 一律 false\n    · 圖中出現「假的/假裝/偽裝/測試/騙/fake/test」字眼 → 一律 false\n  ⚠️ 判斷依據是「外觀像不像正式單據」，不是「有沒有寫到請假資訊」。把資料打成幾行字＝純文字＝false。寧可錯殺。\n\n  【每一筆都要列出 — 重要】\n  - 截圖有幾筆請假就輸出幾個 record，不要合併、不要漏。\n  - 一筆 = 一個假別 + 一段期間。不同假別或不同日期 = 不同筆。\n  - 只有一筆時，records 裡也是放一個。\n\n  【name（每筆都要）】\n  - ⛔「代理人」欄是代班的人，絕不可當 name。\n  - ✅ 用「申請人」欄；若無用「代簽辦人」欄；忽略代理人欄。\n\n  【start / end（每筆各自的開始、結束）】\n  - 一律輸出 YYYY/MM/DD HH:mm（例：2026/06/05 16:45）。\n  - 日期與時間分欄要合併；時間 hhmm 四碼轉 HH:mm（1645→16:45）。\n  - 該筆若期間是 a~b，start 用 a、end 用 b。\n\n  【type】取假別名稱去掉編號（00003-事假→事假；00204-生理假→生理假）。看不到填「其他」。\n  【days / hours｜最重要，要逐字看清楚】期間描述裡幾乎都有「共X天Y時」或「共X天Y小時」(例「共1天0小時」代表 1 天 0 時) → days 填 X、hours 填 Y。這是最準的欄位，優先用它。沒有「共…」才退而求其次看「扣假天數」「扣假時數」欄。一律填數字、沒有就 0。⚠️「1天」是整天(系統自己算成8小時)，別跟「0小時」搞混。⚠️⚠️ 結束時間如「1745 / 17:45」的「17」是『時間』不是『時數』！時數只能取「共X天Y時」裡 Y 的值(共1天0小時→hours=0)，絕對不要把下班時間 17、18 之類當成 hours。\n  【reason】取事由欄；無填 null。\n\n  只回覆 JSON。` }\n        ]\n      }],\n      temperature: 0.1\n    },\n    json: true\n  });\n  \n  const content = ((response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content) || '').trim();\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (!jsonMatch) return [];\n  const parsed = JSON.parse(jsonMatch[0]);\n  const _badLook = ['純文字','照片','其他'].includes(String(parsed.appearance||''));\n  const isLeaveForm = (parsed.is_leave_form === true) && !_badLook;\n  const formReason = parsed.reason || (parsed.appearance ? ('看起來是「' + parsed.appearance + '」') : '');\n  let records = Array.isArray(parsed.records) ? parsed.records : (parsed.name ? [parsed] : []);\n\n  const nameFix = { '楊滔鈞':'楊淄鈞', '楊洶鈞':'楊淄鈞' };\n\n  const out = records.map(rec => {\n    let name = rec.name || '';\n    if (name && nameFix[name]) name = nameFix[name];\n    const start = normDT(rec.start);\n    const end = normDT(rec.end);\n    const _sd = Number(rec.days); const _sh = Number(rec.hours);\n    const _days = (!isNaN(_sd) && _sd > 0) ? _sd : 0;\n    const _extraH = (!isNaN(_sh) && _sh > 0 && _sh <= 8) ? _sh : 0;   // 零頭時數不可能>8(滿8就是一天)，>8 必是把結束時間17:45的17當成時數 → 丟棄\n    let date = null, hrs = null;\n    const _sp = start ? start.split(' ')[0].split('/').map(Number) : null;\n    if (_days >= 1 && _sp) {\n      // 以「共X天」為權威：從開始日起算工作日；X天+Y零頭 → 跨 X(+Y>0再+1) 個工作日；時數 = X*8 + Y。不信任會看錯的結束日\n      const _span = _days + (_extraH > 0 ? 1 : 0);\n      let d = new Date(_sp[0], _sp[1]-1, _sp[2]);\n      while (isOffDay(d)) d.setDate(d.getDate()+1);\n      const s0 = new Date(d); let c = 1; while (c < _span) { d.setDate(d.getDate()+1); if (!isOffDay(d)) c++; }\n      date = (_span === 1) ? fmt(s0) : fmt(s0)+'~'+fmt(d);\n      hrs = _days * 8 + _extraH;\n    } else if (_extraH > 0 && start) {\n      // 只有時數(半天)→ 單日\n      date = start.split(' ')[0];\n      hrs = _extraH;\n    } else {\n      // 天數時數都讀不到 → 退回用上下班時間推算\n      hrs = calcWorkHours(start, end);\n      if (start && end) { const sd = start.split(' ')[0], ed = end.split(' ')[0]; date = (sd === ed) ? sd : sd+'~'+ed; }\n    }\n    return { name, start, end, type: rec.type || '其他', reason: rec.reason || (rec.type || '其他'),\n             hours: (hrs !== null) ? hrs : null, date };\n  }).filter(r => r.name || r.date);\n\n  return [{ json: { records: out, to, nowStr, senderId, sourceType: source.type, isLeaveForm, formReason } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        30032,
+        17536
+      ],
+      "id": "a7436254-80b7-4f35-b386-f03e3c7c2a47",
+      "name": "OCR 解析"
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A:I",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30208,
+        17536
+      ],
+      "id": "633058fb-fbc3-4807-94d3-7abf17ece988",
+      "name": "讀取 Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A:I",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30128,
+        18336
+      ],
+      "id": "be4743b3-2b22-4fc4-a9a6-6f44fdc81069",
+      "name": "讀取 Sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const values = $input.first().json.values || [];\n  const rows = [];\n  for (let i = 1; i < values.length; i++) {\n    const r = values[i];\n    if (!r[0]) continue;\n    rows.push({\n      row: i + 1,\n      applicant: r[0] || '',\n      date: r[1] || '',\n      reason: r[2] || '',\n      hours: r[3] || '',\n      status: r[4] || '',\n      category: r[5] || '',\n      logtime: r[6] || '',\n      lineid: r[7] || '',\n      slip: r[8] || ''\n    });\n  } \n  \n  const prev = $('處理輸入').first().json;\n  const sheetJson = JSON.stringify(rows);\n  const chatInput = prev.chatInput + '\\n\\n【請假紀錄 JSON（含正確 row 號，直接使用）】\\n' + sheetJson;\n  \n  return [{ json: { chatInput, to: prev.to, nowStr: prev.nowStr } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        30640,
+        18336
+      ],
+      "id": "ab6b9259-e64a-4cc2-a693-f4cca5b89256",
+      "name": "格式化資料1"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A{{ $json.row }}:I{{ $json.row }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\":[$json.values]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        31728,
+        17792
+      ],
+      "id": "18b71606-f24e-4fdb-bc23-47fe4ce05698",
+      "name": "更新 Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const oc = $('OCR 解析').first().json;\n  const records = oc.records || [];\n  const to = oc.to;\n  const nowStr = oc.nowStr;\n\n  const leaveVals = ($('讀取 Sheet').first().json.values) || [];\n  const empVals   = ($('讀取員工2').first().json.values) || [];\n  if (oc.sourceType === 'user' && !empVals.some((r,i)=>i>0 && r[2] && r[2]===oc.senderId)) return [];\n  // 假單防偽：OCR 判定不是正式請假單 → 回嗆、不寫入\n  if (oc.isLeaveForm === false) {\n    const why = oc.formReason ? ('（' + oc.formReason + '）') : '';\n    const RTOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n    try {\n      await this.helpers.httpRequest({ method: 'POST', url: 'https://api.line.me/v2/bot/message/push',\n        headers: { 'Authorization': `Bearer ${RTOKEN}`, 'Content-Type': 'application/json' },\n        body: { to, messages: [{ type: 'text', text: '🤨 這張看起來不是正式的假單喔' + why + '\\n別想用假的／測試圖騙我啦～請拍「公司正式請假單」再傳一次 😆' }] } });\n    } catch (e) {}\n    return [];\n  }\n\n  const leaves = [];\n  for (let i = 1; i < leaveVals.length; i++) {\n    const r = leaveVals[i]; if (!r[0]) continue;\n    leaves.push({ row: i + 1, applicant: r[0]||'', date: r[1]||'', reason: r[2]||'', hours: r[3]||'',\n      status: r[4]||'', category: r[5]||'', logtime: r[6]||'', lineid: r[7]||'', slip: r[8]||'' });\n  }\n  const emps = [];\n  for (let i = 1; i < empVals.length; i++) { const r = empVals[i]; if (!r[0]) continue; emps.push({ real: r[0], nick: r[1]||'' }); }\n\n  const parseD = s => { const p = String(s).split(' ')[0].trim().split('/').map(Number); return new Date(p[0], p[1]-1, p[2]); };\n  function range(d) { if (!d) return null; if (String(d).includes('~')) { const a = d.split('~'); return [parseD(a[0]), parseD(a[1])]; } const x = parseD(d); return [x, x]; }\n  function overlap(a, b) { return a[0] <= b[1] && a[1] >= b[0]; }\n  function lev(a, b) {\n    a = String(a); b = String(b);\n    const m = a.length, n = b.length;\n    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));\n    for (let i = 0; i <= m; i++) dp[i][0] = i;\n    for (let j = 0; j <= n; j++) dp[0][j] = j;\n    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)\n      dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1] + (a[i-1]===b[j-1]?0:1));\n    return dp[m][n];\n  }\n  function findNick(raw) {\n    if (!raw) return null;\n    const low = s => String(s).toLowerCase();\n    const rawL = low(raw);\n    for (const e of emps) if (rawL === low(e.real) || rawL === low(e.nick)) return e.nick || e.real;\n    for (const e of emps) {\n      if (e.nick && (rawL.includes(low(e.nick)) || low(e.nick).includes(rawL))) return e.nick;\n      if (e.real && (rawL.includes(low(e.real)) || low(e.real).includes(rawL))) return e.nick || e.real;\n    }\n    const cands = [];\n    for (const e of emps) for (const cand of [e.real, e.nick]) {\n      if (!cand) continue;\n      if (cand.length === raw.length && cand.length >= 2 && cand[0] === raw[0] && lev(raw, cand) <= 1) { cands.push(e.nick || e.real); break; }\n    }\n    const uniq = [...new Set(cands)];\n    return uniq.length === 1 ? uniq[0] : null;\n  }\n\n  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));\n  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n\n  const ops = [];     // 要寫 Sheet 的操作\n  const lines = [];   // LINE 訊息行\n\n  for (const rec of records) {\n    const name = rec.name || '';\n    const date = rec.date || '';\n    const hours = (rec.hours != null) ? String(rec.hours) : '';\n    const type = rec.type || '其他';\n    const reason = rec.reason || type;\n    const rg = range(date);\n  \n    const nick = findNick(name);\n    if (!nick) {\n      ops.push({ action:'add', row:null, values:[name, date, reason, hours, 'awaiting', type, nowStr, to, name] });\n      lines.push(`❓「${name}」不在員工名單，先記為待補（${date}｜${type}）`);\n      continue;\n    }\n\n    let match = null;\n    if (rg) {\n      for (const r of leaves) {\n        if (r.applicant !== nick || r.status === 'cancelled') continue;\n        const rr = range(r.date);\n        if (rr && overlap(rg, rr)) { match = r; break; }\n      }\n    }\n  \n    if (match && match.status === 'confirmed') {\n      lines.push(`⚠️  ${nick} ${match.date}｜${match.category} 已確認過，略過`);\n      continue;\n    }\n    if (match && match.status === 'pending') {\n      ops.push({ action:'update', row:match.row,\n        values:[nick, date||match.date, reason, hours||match.hours, 'confirmed', type, match.logtime||nowStr, match.lineid||to, name] });\n      lines.push(`✅ ${nick} 確認完成（${date||match.date}｜${type}｜${hours||match.hours} 小時）`);\n      continue;\n    }\n\n    // 無對應 → 看日期\n    const endD = rg ? rg[1] : null;\n    const _backfillMin = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 14);\n    if (endD && endD >= _backfillMin) {\n      ops.push({ action:'add', row:null, values:[nick, date, reason, hours, 'confirmed', type, nowStr, to, name] });\n      lines.push(`✅ ${nick} 登記完成（${date}｜${type}｜${hours} 小時）`);\n    }\n    // 過去且無對應 → 安靜略過\n  }\n\n  let msg;\n  if (lines.length) msg = `辛苦囉～假單收到了 👀\\n` + lines.join('\\n');\n  else msg = `辛苦囉～假單收到了 👀\\n這張單上的假都已確認過或非近期，沒有需要新增的喔～`;\n\n  // 直接送一則合併 LINE\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n  try {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to, messages: [{ type: 'text', text: msg }] }\n    });\n  } catch (e) {}\n  \n  // 把要寫 Sheet 的操作往下傳（message 空，下游 送出LINE 不會重複送）\n  if (!ops.length) return [];\n  return ops.map(o => ({ json: { action: o.action, row: o.row, values: o.values, message: '', to } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        30544,
+        17536
+      ],
+      "id": "da615d2a-6005-4703-b555-0a72bd30de84",
+      "name": "解析假單結果"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A{{ $json.row }}:I{{ $json.row }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\": [$json.values]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30992,
+        17168
+      ],
+      "id": "28cd0bf3-b8f1-4376-b040-49956fe03803",
+      "name": "更新Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A:I:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\": [$json.values]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30976,
+        17536
+      ],
+      "id": "0c05da4c-ac58-4b04-a6c4-e60bc0baa210",
+      "name": "新增Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('解析假單結果').first().json;\n\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n  \n  if (b.to && b.message) {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: b.to, messages: [{ type: 'text', text: b.message }] }\n    });\n  }\n  return [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31136,
+        17168
+      ],
+      "id": "77c9d78f-e097-464b-aef4-115b3280e311",
+      "name": "送出LINE"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('解析假單結果').first().json;\n\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n  \n  if (b.to && b.message) {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: b.to, messages: [{ type: 'text', text: b.message }] }\n    });\n  }\n  return [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31232,
+        17328
+      ],
+      "id": "682f54f8-4a5e-4894-848b-b904e69db8e0",
+      "name": "送出LINE1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('大腦').first().json;\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n  if (b.to && b.message) {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: b.to, messages: [{ type: 'text', text: b.message }] }\n    });\n  }\n  return [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31952,
+        17792
+      ],
+      "id": "a62e73b2-b2b7-4bee-982e-bcd8d16c96ca",
+      "name": "送出Line"
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/employees!A:C",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30304,
+        18336
+      ],
+      "id": "297fb621-996c-4b10-a70d-70b463702fcf",
+      "name": "讀取員工",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentOut = $input.first().json.output || '';\nconst ctx = $('處理輸入').first().json;\nconst to = ctx.to;\nconst nowStr = ctx.nowStr;\n\nconst ev = $('LINE Webhook').first().json.body.events[0];\nconst userMessage = (ev.message && ev.message.text) || '';\nconst sourceType = ev.source.type;\nconst mentioned = /梅池道|津日|沒遲到/.test(userMessage);\n\n// === SOP 行為式延續：記住誰剛問過 /sop（n8n 跨執行記憶；防呆 try/catch，取不到也不影響運作）===\nlet _sd; try { _sd = $getWorkflowStaticData('global'); } catch (e) { _sd = {}; }\n_sd.sop = _sd.sop || {};\nconst _sopUid = (ev.source && ev.source.userId) || '';\nconst SOP_WINDOW_MS = 10 * 60 * 1000;\nconst _sopNow = Date.now();\nconst wasInSop = !!(_sopUid && _sd.sop[_sopUid] && (_sopNow - _sd.sop[_sopUid] < SOP_WINDOW_MS));\nconst sopArm = () => { if (_sopUid) { _sd.sop[_sopUid] = _sopNow; for (const k in _sd.sop) { if (_sopNow - _sd.sop[k] > SOP_WINDOW_MS) delete _sd.sop[k]; } } };\n\n// === 群組白名單：非指定群組 → 不理 ===\nconst ALLOWED_GROUP = '<LINE_GROUP_ID>';\nif (sourceType === 'group' || sourceType === 'room') {\n  const gid = ev.source.groupId || ev.source.roomId;\n  if (gid !== ALLOWED_GROUP) return [];\n}\n// === 群組打「綁定/新成員」→ 提示改私訊（這兩個功能只能私訊）===\nif ((sourceType === 'group' || sourceType === 'room') && /^\\s*(綁定|新成員)/.test(userMessage)) {\n  return [{ json: { action: 'reply', to, message: '🔒「綁定」和「新成員」請直接「私訊我」哦～在群組我看不到你的身分 🙏', rows: [] } }];\n}\n\n// === 指令說明 / 教學（打「/help」）；📌 以後新增功能 → 只改這個 HELP_TEXT 一處即可 ===\nif (/^\\s*\\/help\\b/i.test(userMessage) && (sourceType !== 'user' || (($('讀取員工').first().json.values) || []).some((r, i) => i > 0 && r[2] && r[2] === (ev.source.userId || '')))) {\n  const D = '----------------------';\n  const HELP_TEXT = [\n    '📖 津日 梅池道 使用說明',\n    D,\n    '🆕 第一次使用（私訊我）',\n    '・現有同仁：傳「綁定 暱稱」（例：綁定 小明）',\n    '・新進同仁：傳「新成員」照表單填',\n    D,\n    '📝 請假（群組）格式：姓名 日期 假別',\n    '例：小明 6/25 特休 ／ 小明 明天 病假',\n    '📎 假單拍照傳群組即可',\n    D,\n    '🔍 查詢（群組/私訊）',\n    '例：今天誰請假 ／ 這週請假',\n    D,\n    '✏️ 修改取消（群組，要帶日期）',\n    '例：小明 6/25 改成事假 ／ 取消 小明 6/25 的假',\n    D,\n    '📋 交接（私訊）',\n    '查交接：小明 6/25 的交接',\n    '查代理人：小明 的代理人是誰',\n    D,\n    '📚 SOP（私訊）：/sop 你的問題',\n    '建立 SOP：/sop建立',\n    D,\n    'ℹ️ 打 /help 看說明'\n  ].join('\\n');\n  return [{ json: { action: 'reply', to, message: HELP_TEXT, rows: [] } }];\n}\n\n// === 私訊存取閘門：非成員只能走「綁定 / 新成員建檔」，其餘一律不回應（已是成員才有全功能）===\nif (sourceType === 'user') {\n  const _emp = ($('讀取員工').first().json.values) || [];\n  const _sid = ev.source.userId || '';\n  const _isMember = _emp.some((r, i) => i > 0 && r[2] && r[2] === _sid);\n  const _isOnboarding = /^\\s*綁定/.test(userMessage) || /^\\s*新成員/.test(userMessage)\n    || (/本名[:：]/.test(userMessage) && /暱稱[:：]/.test(userMessage));\n  if (!_isMember && !_isOnboarding) return [];\n}\n\n// === /sop建立 前綴：回傳 SOP 建立表單網址（要放在 /sop 之前判斷，否則會被 /sop 吃掉）===\nif (sourceType === 'user' && /^\\s*\\/sop\\s*建立/i.test(userMessage)) {\n  const msg = '📝 建立 SOP 文件，請開這個連結：\\nhttps://<SOP_GENERATOR_FORM_URL>/\\n\\n（電腦、手機瀏覽器都可直接開；不一定要用手機）';\n  return [{ json: { action: 'reply', to, message: msg, rows: [] } }];\n}\n// === /sop 前綴：呼叫 AI SOP 助理（Mac Mini :3345）===\nif (sourceType === 'user' && /^\\s*\\/sop\\b/i.test(userMessage)) {\n  const sopQuery = userMessage.replace(/^\\s*\\/sop\\s*/i, '').trim();\n  let answer = '抱歉，SOP 助理暫時無法回應，請稍後再試。';\n  try {\n    const res = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'http://localhost:3345/ask',\n      headers: { 'Content-Type': 'application/json' },\n      body: { sessionId: ev.source.userId, message: sopQuery, client: 'line', followup: wasInSop },\n      json: true\n    });\n    if (res && res.answer) answer = res.answer;\n  } catch (e) {}\n  sopArm();\n  return [{ json: { action: 'reply', to, message: answer + '\\n\\n（💡 接下來直接問就好，不用再打 /sop；10 分鐘沒問或改做別的事會自動結束）', rows: [] } }];\n}\n// （私訊白名單：等 userId 補齊後再加）\n\nconst leaveVals = ($('讀取 Sheet1').first().json.values) || [];\nconst empVals   = ($('讀取員工').first().json.values) || [];\nconst handVals  = ($('讀取handover').first().json.values) || [];\n\nconst leaves = [];\nfor (let i = 1; i < leaveVals.length; i++) {\n  const r = leaveVals[i]; if (!r[0]) continue;\n  leaves.push({ row: i + 1, applicant: r[0]||'', date: r[1]||'', reason: r[2]||'', hours: r[3]||'',\n    status: r[4]||'', category: r[5]||'', logtime: r[6]||'', lineid: r[7]||'', slip: r[8]||'' });\n}\nconst emps = [];\nfor (let i = 1; i < empVals.length; i++) { const r = empVals[i]; if (!r[0]) continue; emps.push({ real: r[0], nick: r[1]||'', uid: r[2]||'', row: i+1 }); }\n\nconst pad = n => String(n).padStart(2, '0');\nconst holidays = ['2026/01/01','2026/02/28','2026/04/04','2026/05/01','2026/10/10',\n  '2026/02/16','2026/02/17','2026/02/18','2026/02/19','2026/02/20','2026/02/21',\n  '2026/04/05','2026/06/19','2026/09/25'];\nconst fmt = d => d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate());\nconst isOff = d => d.getDay() === 0 || d.getDay() === 6 || holidays.includes(fmt(d));\nconst isHoliday = d => holidays.includes(fmt(d));\nconst parseD = s => { const p = String(s).split(' ')[0].trim().split('/').map(Number); return new Date(p[0], p[1]-1, p[2]); };\nconst now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));\nconst today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\nconst wd = ['週日','週一','週二','週三','週四','週五','週六'];\n\nfunction singleDate(expr) {\n  if (!expr) return new Date(today);\n  expr = String(expr);\n  if (/今天|今日/.test(expr)) return new Date(today);\n  if (/明天|明日/.test(expr)) { const d = new Date(today); d.setDate(d.getDate()+1); return d; }\n  if (/後天/.test(expr)) { const d = new Date(today); d.setDate(d.getDate()+2); return d; }\n  if (/昨天|昨日/.test(expr)) { const d = new Date(today); d.setDate(d.getDate()-1); return d; }\n  if (/前天/.test(expr)) { const d = new Date(today); d.setDate(d.getDate()-2); return d; }\n  { const nm = expr.match(/下(?:週|周|星期|禮拜)\\s*([一二三四五六日天])/); if (nm) { const T = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':0,'天':0}[nm[1]]; const nextMon = new Date(today); nextMon.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7)); const off = (T === 0) ? 6 : (T - 1); const d = new Date(nextMon); d.setDate(nextMon.getDate() + off); return d; } }\n  const dm = expr.match(/(\\d{1,2})[\\/月](\\d{1,2})/);\n  if (dm) { let y = today.getFullYear(); let s = new Date(y, +dm[1]-1, +dm[2]); if ((s-today)/86400000 < -60) s = new Date(y+1, +dm[1]-1, +dm[2]); return s; }\n  return new Date(today);\n}\nfunction countWorkdays(s, e) { let c = 0; const d = new Date(s); while (d <= e) { if (!isOff(d)) c++; d.setDate(d.getDate()+1); } return c; }\nfunction resolveRange(expr, hoursHint) {\n  expr = String(expr || '');\n  const rg = expr.match(/(\\d{1,2})[\\/月](\\d{1,2})\\D+(\\d{1,2})[\\/月](\\d{1,2})/);\n  if (rg) {\n    let y = today.getFullYear();\n    const s = new Date(y, +rg[1]-1, +rg[2]); let e = new Date(y, +rg[3]-1, +rg[4]);\n    if (e < s) e = new Date(y+1, +rg[3]-1, +rg[4]);\n    return { dateStr: fmt(s)+'~'+fmt(e), start: s, end: e, hours: hoursHint || countWorkdays(s,e)*8 };\n  }\n  let nDays = 0;\n  const ndA = expr.match(/(\\d+(?:\\.\\d+)?)\\s*天/);\n  if (ndA) nDays = parseFloat(ndA[1]);\n  if (!nDays) { const ndC = expr.match(/([一二兩三四五六七八九十])\\s*天/); if (ndC) nDays = {'一':1,'二':2,'兩':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10}[ndC[1]]; }\n  if (!nDays && hoursHint && hoursHint > 0 && hoursHint % 8 === 0) nDays = hoursHint / 8;\n  if (nDays >= 2) {\n    let d = singleDate(expr); while (isOff(d)) d.setDate(d.getDate()+1);\n    const s2 = new Date(d); let c = 1; while (c < nDays) { d.setDate(d.getDate()+1); if (!isOff(d)) c++; }\n    return { dateStr: fmt(s2)+'~'+fmt(d), start: s2, end: d, hours: hoursHint || Math.round(nDays)*8 };\n  }\n  const s = singleDate(expr);\n  return { dateStr: fmt(s), start: s, end: s, hours: hoursHint || 8 };\n}\nfunction findNick(raw) {\n  if (!raw) return null;\n  const low = s => String(s).toLowerCase();\n  const rawL = low(raw);\n  for (const e of emps) if (rawL === low(e.real) || rawL === low(e.nick)) return e.nick || e.real;\n  for (const e of emps) {\n    if (e.nick && (rawL.includes(low(e.nick)) || low(e.nick).includes(rawL))) return e.nick;\n    if (e.real && (rawL.includes(low(e.real)) || low(e.real).includes(rawL))) return e.nick || e.real;\n  }\n  return null;\n}\nfunction overlap(recDate, qs, qe) {\n  if (!recDate) return false;\n  let rs, re;\n  if (String(recDate).includes('~')) { const a = recDate.split('~'); rs = parseD(a[0]); re = parseD(a[1]); }\n  else { rs = re = parseD(recDate); }\n  return qs <= re && qe >= rs;\n}\nconst pick = a => a[Math.floor(Math.random()*a.length)];\nconst hLabel = h => { h = Number(h) || 0; if (h > 0 && h % 8 === 0) return (h / 8) + ' 天'; if (h > 8) return Math.floor(h / 8) + ' 天 ' + (h % 8) + ' 小時'; return h + ' 小時'; };\nconst isVague = e => { e = String(e || ''); const period = /(下|這|本)(週|周|星期|禮拜)|下個?月|這個?月|本月|月底|月初/.test(e); const specific = /\\d|今天|明天|後天|今日|明日|下(?:週|周|星期|禮拜)\\s*[一二三四五六日天]/.test(e); return period && !specific; };\n\nconst stripHandoverHeader = s => String(s).split('\\n')\n  .filter(l => !/^\\s*\\u{1F4CB}|^\\s*\\u8acb\\u5047\\u4ea4\\u63a5\\u55ae|^\\s*\\u59d3\\u540d[:\\uFF1A]|^\\s*\\u8acb\\u5047\\u671f\\u9593[:\\uFF1A]|^\\s*\\u4ee3\\u7406\\u4eba[:\\uFF1A]/u.test(l))\n  .join('\\n').trim();\n\n// ===== 私訊：綁定 userId（開頭「綁定」觸發；本名/暱稱大小寫皆可，嚴格比對）=====\nif (sourceType === 'user' && /^\\s*綁定/.test(userMessage)) {\n  const raw = userMessage.replace(/^\\s*綁定\\s*/, '').replace(/[\\s，。!！?？~～、,.]+$/, '').trim();\n  if (!raw) {\n    return [{ json: { action: 'reply', to, message: '請在「綁定」後面加上你的名字哦～例如：綁定 小明 🙏', rows: [] } }];\n  }\n  const senderId = ev.source.userId || '';\n  const _already = emps.find(e => e.uid && e.uid === senderId);\n  if (_already) {\n    return [{ json: { action: 'reply', to, message: '你已經綁定為「' + (_already.nick || _already.real) + '」囉～不能再綁別的名字，如需更改請找管理員 🙏', rows: [] } }];\n  }\n  const low = s => String(s).toLowerCase();\n  const rawL = low(raw);\n  const matched = emps.filter(e => low(e.real) === rawL || low(e.nick) === rawL);\n  if (matched.length === 0) {\n    return [{ json: { action: 'reply', to, message: '找不到「' + raw + '」這個名字耶～請照公司名冊打你的「本名」或「英文暱稱」，例如：綁定 小明 🙏', rows: [] } }];\n  }\n  if (matched.length > 1) {\n    return [{ json: { action: 'reply', to, message: '「' + raw + '」對到不只一位同事，請改用更明確的「本名」或「英文暱稱」再試一次 🙏', rows: [] } }];\n  }\n  const me = matched[0];\n  if (me.uid) {\n    if (me.uid === senderId) {\n      return [{ json: { action: 'reply', to, message: '你已經綁定過囉，' + (me.nick || me.real) + '！不用再綁一次 😊', rows: [] } }];\n    }\n    return [{ json: { action: 'reply', to, message: '「' + (me.nick || me.real) + '」已經被綁定過了～如果這是你本人、但不是你綁的，請找管理員協助 🙏', rows: [] } }];\n  }\n  return [{ json: { action: 'bind_user', to, empRow: me.row, bindRow: [me.real, me.nick, senderId],\n    message: '✅ 綁定成功，' + (me.nick || me.real) + '！以後請假交接的通知我就會私訊你囉 🎉', rows: [] } }];\n}\n\n// ===== 私訊：新成員建檔（開頭「新成員」→ 回模板；填好本名+暱稱 → 新增到 employees）=====\nif (sourceType === 'user' && (/^\\s*新成員/.test(userMessage) || (/本名[:：]/.test(userMessage) && /暱稱[:：]/.test(userMessage)))) {\n  const realM = userMessage.match(/本名[:：]\\s*(\\S+)/);\n  const nickM = userMessage.match(/暱稱[:：]\\s*(\\S+)/);\n  const nReal = realM ? realM[1] : '';\n  const nNick = nickM ? nickM[1] : '';\n  if (!nReal || !nNick) {\n    return [{ json: { action: 'reply', to, message: '🆕 新成員建檔～請複製下面、填好你的「本名」和「暱稱」再回傳給我就好：\\n\\n新成員建檔\\n本名：\\n暱稱：', rows: [] } }];\n  }\n  const nSid = ev.source.userId || '';\n  const nLow = s => String(s).toLowerCase();\n  const already = emps.find(e => e.uid && e.uid === nSid);\n  if (already) {\n    return [{ json: { action: 'reply', to, message: '你已經建檔過囉，' + (already.nick || already.real) + '！不用再建一次 😊', rows: [] } }];\n  }\n  if (emps.some(e => nLow(e.nick) === nLow(nNick))) {\n    return [{ json: { action: 'reply', to, message: '「' + nNick + '」這個暱稱已經有人用了～請換一個獨一無二的暱稱再回傳 🙏', rows: [] } }];\n  }\n  if (emps.some(e => nLow(e.real) === nLow(nReal))) {\n    return [{ json: { action: 'reply', to, message: '「' + nReal + '」這個本名已經在名冊裡了～如果是你本人，請改用「綁定 你的暱稱」來綁定 🙏', rows: [] } }];\n  }\n  return [{ json: { action: 'newmember_add', to, empRow2: [nReal, nNick, nSid],\n    message: '✅ 建檔成功，歡迎加入，' + nNick + '！（本名：' + nReal + '）以後請假、交接通知都會找你囉 🎉', rows: [] } }];\n}\n\n// ===== 私訊：交接錄入（靠模板標記，upsert）=====\nif (sourceType === 'user' &&\n    (/交接單/.test(userMessage) || (/姓名[:：]/.test(userMessage) && /請假期間[:：]/.test(userMessage)))) {\n  const nameM = userMessage.match(/姓名[:：]\\s*(\\S+)/);\n  const dateM = userMessage.match(/請假期間[:：]\\s*([0-9\\/~]+)/);\n  const agentM = userMessage.match(/代理人[:：][ \\t]*(\\S+)/);\n  const hName = nameM ? nameM[1] : '';\n  const hDate = dateM ? dateM[1] : '';\n  const agentRaw = agentM ? agentM[1] : '';\n  const agentNick = agentRaw ? (findNick(agentRaw) || agentRaw) : '';\n  let existRow = null;\n  for (let i = 1; i < handVals.length; i++) {\n    const r = handVals[i];\n    if (r[0] === hName && r[1] === hDate) { existRow = i + 1; break; }\n  }\n  if (existRow) {\n    const oldRow = handVals[existRow - 1] || [];\n    const oldContent = oldRow[2] || '';\n    const oldAgent = oldRow[4] || '';\n    const delim = '\\n──── 更新 ' + nowStr + ' ────\\n';\n    const merged = oldContent\n      ? (oldContent + delim + stripHandoverHeader(userMessage))\n      : userMessage;\n    const finalAgent = agentNick || oldAgent;\n    return [{ json: { action: 'handover_update', to, row: existRow,\n      hRow: [hName, hDate, merged, nowStr, finalAgent], agentNick: finalAgent, forwardContent: stripHandoverHeader(userMessage), applicant: hName, period: hDate,\n      message: '更新好囉～ ' + hName + ' ' + hDate + ' 的交接我幫你接在原本的下面了（保留前面紀錄）📋✨', rows: [] } }];\n  }\n  return [{ json: { action: 'handover_add', to,\n    hRow: [hName, hDate, userMessage, nowStr, agentNick], agentNick, forwardContent: stripHandoverHeader(userMessage), applicant: hName, period: hDate,\n    message: '收到囉～ ' + hName + ' ' + hDate + ' 的交接我幫你存好了 📋\\n代理的同事有需要就查得到，安心放假吧 😊', rows: [] } }];\n}\n\n// ===== 私訊：查交接 =====\nif (sourceType === 'user') {\n  const umL = userMessage.toLowerCase();\n  let targetNick = null;\n  for (const e of emps) {\n    const nk = (e.nick || '').toLowerCase(), rl = (e.real || '').toLowerCase();\n    if ((nk && umL.includes(nk)) || (rl && umL.includes(rl))) { targetNick = e.nick || e.real; break; }\n  }\n  // ===== 反查：targetNick 現在是誰的代理人 =====\n  const reverseIntent = targetNick && /代理(?!人)[^，。]*?(誰|什麼|哪些|的(工作|事|事情|交接))/.test(userMessage);\n  if (reverseIntent) {\n    let covering = [];\n    for (let i = 1; i < handVals.length; i++) {\n      const r = handVals[i]; if (!r[0]) continue;\n      if ((r[4] || '') === targetNick) covering.push({ name: r[0], date: r[1] });\n    }\n    if (!covering.length) {\n      return [{ json: { action: 'reply', to, message: targetNick + ' 目前沒有被指定代理任何人耶 😊', rows: [] } }];\n    }\n    const list = covering.map(c => '・' + c.name + '（' + c.date + '）').join('\\n');\n    return [{ json: { action: 'reply', to, message: '📋 ' + targetNick + ' 目前是以下同事的代理人：\\n' + list + '\\n\\n可以打「(姓名) 的交接」查看詳細內容哦～', rows: [] } }];\n  }\n\n  // ===== 正向：查某人的代理人是誰（只回代理人，不倒整張交接）=====\n  const fwdProxyIntent = targetNick && /代理人/.test(userMessage) && /(誰|哪位)/.test(userMessage);\n  if (fwdProxyIntent) {\n    let pRecs = [];\n    for (let i = 1; i < handVals.length; i++) { const r = handVals[i]; if (!r[0]) continue; if (r[0] === targetNick) pRecs.push({ date: r[1], agent: r[4] || '' }); }\n    if (!pRecs.length) {\n      return [{ json: { action: 'reply', to, message: targetNick + ' 目前還沒有交接紀錄，查不到代理人耶～可以提醒他填一下 🙏', rows: [] } }];\n    }\n    const pDm = userMessage.match(/(\\d{1,2})[\\/月](\\d{1,2})/);\n    if (pDm) { const q = singleDate(pDm[0]); const f = pRecs.filter(x => overlap(x.date, q, q)); if (f.length) pRecs = f; }\n    const pWith = pRecs.filter(x => x.agent);\n    if (!pWith.length) {\n      return [{ json: { action: 'reply', to, message: targetNick + '（' + pRecs[0].date + '）還沒指定代理人喔～', rows: [] } }];\n    }\n    if (pWith.length === 1) {\n      return [{ json: { action: 'reply', to, message: '👤 ' + targetNick + '（' + pWith[0].date + '）的代理人是 ' + pWith[0].agent, rows: [] } }];\n    }\n    return [{ json: { action: 'reply', to, message: '👤 ' + targetNick + ' 的代理人：\\n' + pWith.map(x => '・' + x.date + '：' + x.agent).join('\\n'), rows: [] } }];\n  }\n\n  const handoverIntent = /交接/.test(userMessage)\n    || (targetNick && /(工作|負責|做什麼|在幹嘛|在忙|忙什麼|怎麼辦|事情|事項|處理|職務|代理)/.test(userMessage));\n  if (handoverIntent) {\n    if (!targetNick) {\n      return [{ json: { action: 'reply', to, message: '要查誰的交接呢？請給「名字＋請假日期」，例如「小明 6/8 的交接」🙏', rows: [] } }];\n    }\n  let hand = [];\n  for (let i = 1; i < handVals.length; i++) {\n    const r = handVals[i]; if (!r[0]) continue;\n    if (r[0] === targetNick) hand.push({ name: r[0], date: r[1], content: r[2], ts: r[3], agent: r[4] || '' });\n  }\n  if (!hand.length) {\n    return [{ json: { action: 'reply', to, message: targetNick + ' 目前還沒填交接耶～可以提醒他補一下 🙏', rows: [] } }];\n  }\n  const dm = userMessage.match(/(\\d{1,2})[\\/月](\\d{1,2})|今天|明天|後天/);\n  let cand = hand;\n  if (dm) { const q = singleDate(dm[0]); const f = hand.filter(h => overlap(h.date, q, q)); if (f.length) cand = f; }\n  let target;\n  if (cand.length === 1) target = cand[0];\n  else {\n    const dates = [...new Set(cand.map(h => h.date))];\n    if (dates.length > 1) {\n      return [{ json: { action: 'reply', to, message: targetNick + ' 有好幾段假，要查哪一段？\\n' + dates.map(d => '・' + d).join('\\n'), rows: [] } }];\n    }\n    cand.sort((a, b) => (a.ts < b.ts ? 1 : -1)); target = cand[0];\n  }\n  // 用「──── 更新 時間 ────」拆出每個版本：原始 + 後續更新\n  const segs = String(target.content || '').split(/\\n*──── 更新 (.+?) ────\\n*/);\n  const vers = [{ ts: '', body: stripHandoverHeader(segs[0] || '') }];\n  for (let k = 1; k < segs.length; k += 2) {\n    vers.push({ ts: (segs[k] || '').trim(), body: stripHandoverHeader(segs[k + 1] || '') });\n  }\n  const latest = vers[vers.length - 1];\n  const latestTs = latest.ts || target.ts || '';\n  let msg = '📋 ' + target.name + '（' + target.date + '）的交接';\n  if (target.agent) msg += '\\n👤 代理人：' + target.agent;\n  if (latestTs) msg += '\\n🕒 最新版：' + latestTs;\n  msg += '\\n\\n' + latest.body;\n  if (vers.length > 1) {\n    msg += '\\n\\n— 📜 歷史紀錄 —';\n    for (let k = vers.length - 2; k >= 0; k--) {\n      msg += '\\n\\n【' + (vers[k].ts ? vers[k].ts : '原始版本') + '】\\n' + vers[k].body;\n    }\n  }\n  return [{ json: { action: 'reply', to, message: msg, rows: [] } }];\n  }\n}\n\n\nlet p;\ntry { p = JSON.parse(agentOut.match(/\\{[\\s\\S]*\\}/)[0]); }\ncatch (e) { return [{ json: { action: 'reply', to, message: '啊咧？我有點看不懂耶，可以換句話再說一次嗎～', rows: [] } }]; }\n\n// 私訊寫入限制（測試期）：只有指定 userid 能在私訊請假/改/取消/外出；其餘導去群組\nconst PRIVATE_WRITE_ALLOWED = ['<LINE_USER_ID>4'];\nif (sourceType === 'user' && ['register', 'cancel', 'modify', '外出'].includes(p.intent) && !PRIVATE_WRITE_ALLOWED.includes(ev.source.userId || '')) {\n  return [{ json: { action: 'reply', to, message: '請假／修改／取消請到群組辦理哦～這樣大家都看得到、也比較不會漏 🙏', rows: [] } }];\n}\n\n// ===== 查詢 =====\nif (p.intent === 'query') {\n  const qd = (String(p.query_date || '') + ' ' + userMessage);\n  let startD = null, endD = null, label = '', all = false;\n\n  if (/全部|所有|全員|列出|整理|清單|歷史/.test(qd)\n      && !/今天|今日|明天|明日|後天|本週|這週|下週|本月|這個月|\\d/.test(qd)) {\n    all = true; label = '全部請假紀錄';\n  } else if (/本週|這週|這禮拜|本周|這周/.test(qd)) {\n    startD = new Date(today); endD = new Date(today); endD.setDate(today.getDate() + ((7 - today.getDay()) % 7));\n    label = '本週（' + fmt(startD) + '~' + fmt(endD) + '）';\n  } else if (/下週|下周|下星期/.test(qd)) {\n    const mon = new Date(today); mon.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7));\n    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);\n    startD = mon; endD = sun; label = '下週（' + fmt(startD) + '~' + fmt(endD) + '）';\n  } else if (/本月|這個月|這月/.test(qd)) {\n    startD = new Date(today.getFullYear(), today.getMonth(), 1);\n    endD = new Date(today.getFullYear(), today.getMonth() + 1, 0);\n    label = '本月（' + fmt(startD) + '~' + fmt(endD) + '）';\n  } else {\n    const q = singleDate(p.query_date);\n    startD = q; endD = q; label = fmt(q) + '(' + wd[q.getDay()] + ')';\n  }\n\n  let hit = leaves.filter(r => r.status !== 'cancelled' && (all || overlap(r.date, startD, endD)));\n  hit.sort((a, b) => {\n    const da = String(a.date).split('~')[0], db = String(b.date).split('~')[0];\n    return da < db ? -1 : da > db ? 1 : 0;\n  });\n\n  let msg;\n  if (!hit.length) {\n    msg = pick(['津日 梅池道 查過囉～ 📋','報告！']) + '\\n' + label + ' 沒有請假紀錄，大家都在崗位上 💪';\n  } else {\n    const lines = hit.map(r => {\n      const tag = r.status === 'confirmed' ? '✅ 已確認' : '⏳ 待假單';\n      return '・' + r.applicant + '（' + r.date + '｜' + r.category + '｜' + tag + '）';\n    }).join('\\n');\n    msg = pick(['查到囉～ ✨','津日 梅池道 為你查好啦 📋','幫你整理好囉 📋']) + '\\n' + label + '：\\n' + lines;\n  }\n  return [{ json: { action: 'reply', to, message: msg, rows: [] } }];\n}\n\n// ===== 取消 / 修改 =====\nif ((p.intent === 'cancel' || p.intent === 'modify') && Array.isArray(p.items) && p.items.length) {\n  const it = p.items[0];\n  const rawName = it.name ? String(it.name).trim() : '';\n  // 名字要「真的出現在訊息原文」才採用（防 AI 從請假紀錄 JSON 腦補沒提到的人名）\n  const _nameInMsg = rawName && userMessage.toLowerCase().includes(rawName.toLowerCase());\n  let nick = null;\n  if (_nameInMsg) {\n    nick = findNick(rawName);\n    if (!nick) return [{ json: { action: 'reply', to, message: '啊咧？找不到「' + rawName + '」這位同仁耶～', rows: [] } }];\n  } else {\n    // 沒有可信名字（沒打名字／用回覆改自己的假）→ 用發話者本人\n    const senderId = ev.source.userId || '';\n    const me = emps.find(e => e.uid && e.uid === senderId);\n    if (me) nick = me.nick || me.real;\n    else return [{ json: { action: 'reply', to, message: '要改誰的假呢？請打上名字（例：小明 改成事假），或先私訊我「綁定 暱稱」改自己的 🙏', rows: [] } }];\n  }\n\n  const endOf = d => { const s = String(d); return parseD(s.includes('~') ? s.split('~').pop() : s); };\n  const tr = it.date ? resolveRange(it.date, null) : null;\n  let hits = leaves.filter(r => {\n    if (r.applicant !== nick || r.status === 'cancelled') return false;\n    if (tr) return overlap(r.date, tr.start, tr.end);   // 有指定日期 → 照日期比對\n    return endOf(r.date) >= today;                       // 沒指定 → 只考慮「還沒過期」的（過期的不可能是要改的）\n  });\n\n  if (hits.length === 0)\n    return [{ json: { action: 'reply', to, message: '啊咧咧？找不到 ' + nick + ' 最近要' + (p.intent==='cancel'?'取消':'修改') + '的假耶，確認一下日期？', rows: [] } }];\n\n  // 沒指定日期、又有多筆未過期 → 優先抓「還沒附假單截圖」的那筆（slip 空 = 還沒附證明，最可能是要動的）\n  // 只縮到剛好一筆才自動處理；分不出來（都沒附 or 都附了）就往下問日期，不亂猜\n  if (!tr && hits.length > 1) {\n    const noSlip = hits.filter(h => !String(h.slip || '').trim());\n    if (noSlip.length === 1) hits = noSlip;\n  }\n  // 仍多筆（有指定日期還對到多筆，罕見）→ 只問日期、不顯示假別（保護隱私）\n  if (hits.length > 1) {\n    const dates = [...new Set(hits.map(h => h.date))];\n    return [{ json: { action: 'reply', to, message: nick + ' 那段有好幾筆，要' + (p.intent==='cancel'?'取消':'改') + '哪一天呢？（' + dates.join('、') + '）', rows: [] } }];\n  }\n\n  const rec = hits[0];\n  if (p.intent === 'cancel') {\n    const values = [rec.applicant, rec.date, rec.reason, rec.hours, 'cancelled', rec.category, rec.logtime, rec.lineid, rec.slip];\n    return [{ json: { action: 'update', to, row: rec.row, values, message: '了解！✅ 已取消 ' + nick + ' 在 ' + rec.date + ' 的 ' + rec.category, rows: [] } }];\n  }\n  const nr = it.new_date ? resolveRange(it.new_date, it.hours ? Number(it.hours) : null) : null;\n  const newDate = nr ? nr.dateStr : rec.date;\n  // 相對時數：回診人多「+1小」「多2小時」「再加1小」「少1小時」→ 用原時數加減；否則照舊(設定)\n  let newHours;\n  const _relAdd = userMessage.match(/(?:[+＋]|加|多|再加?)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:小時|小|時|h)/i);\n  const _relSub = userMessage.match(/(?:[-－]|減|少)\\s*(\\d+(?:\\.\\d+)?)\\s*(?:小時|小|時|h)/i);\n  if (_relAdd || _relSub) {\n    const _base = parseFloat(rec.hours) || 0;\n    const _delta = _relAdd ? parseFloat(_relAdd[1]) : -parseFloat(_relSub[1]);\n    newHours = String(Math.max(0, _base + _delta));\n  } else {\n    newHours = it.hours ? String(it.hours) : (nr ? String(nr.hours) : rec.hours);\n  }\n  const newCat = it.category || rec.category;\n  const newReason = it.reason || rec.reason;\n  const values = [rec.applicant, newDate, newReason, newHours, rec.status, newCat, rec.logtime, rec.lineid, rec.slip];\n  return [{ json: { action: 'update', to, row: rec.row, values, message: '了解！✅ ' + nick + ' 的請假已更新\\n日期：' + newDate + '｜假別：' + newCat + '｜' + hLabel(newHours), rows: [] } }];\n}\n\n// ===== 外出 / 公出 =====\nif (p.intent === '外出' && Array.isArray(p.items) && p.items.length) {\n  const todayStr = fmt(today);\n  const rows = [], ok = [], nf = [];\n  for (const it of p.items) {\n    const nick = findNick(it.name);\n    if (!nick) { nf.push(it.name); continue; }\n    const reason = it.reason || '外出';\n    rows.push([nick, todayStr, reason, '0', 'confirmed', '外出', nowStr, to, '']);\n    ok.push({ nick, reason });\n  }\n  const parts = [];\n  for (const o of ok) parts.push('📮 ' + o.nick + ' 外出：' + o.reason);\n  for (const n of nf) parts.push('❓ 找不到「' + n + '」這位同仁');\n  const head = ok.length ? '收到～幫你記一下外出（在勤、不扣假）✅' : '';\n  const msg = (head ? head + '\\n' : '') + parts.join('\\n');\n  return [{ json: { action: rows.length ? 'append' : 'reply', to, message: msg, rows } }];\n}\n\n// ===== 登記 =====\nif (p.intent === 'register' && Array.isArray(p.items)) {\n  const rows = [], ok = [], dup = [], nf = [], vague = [], slipnote = [];\n  for (const it of p.items) {\n    const nick = findNick(it.name);\n    if (!nick) { nf.push(it.name); continue; }\n    if (isVague(it.date)) { vague.push(nick); continue; }\n    if (!it.category && /補.{0,4}假單|假單.{0,4}(送出|傳|補|上傳|提交|補上|已傳|已送)|補件|補單/.test(userMessage)) { slipnote.push(nick); continue; }\n    const rr = resolveRange(it.date, it.hours ? Number(it.hours) : null);\n    const cat = it.category || '其他';\n    // 只有「同人+日期重疊+同假別+時數相加>8」才算重複（允許同日不同假別、或同日兩個半天）\n    const exists = leaves.find(r => r.applicant === nick && r.status !== 'cancelled' && overlap(r.date, rr.start, rr.end) && ((parseFloat(r.hours) || 0) + (parseFloat(rr.hours) || 0) > 8));\n    if (exists) { dup.push({ nick, date: exists.date, category: exists.category, status: exists.status }); continue; }\n    const holidayDates = [];\n    { const d = new Date(rr.start); while (d <= rr.end) { if (isHoliday(d)) holidayDates.push(fmt(d) + '(' + wd[d.getDay()] + ')'); d.setDate(d.getDate() + 1); } }\n    rows.push([nick, rr.dateStr, it.reason || cat, String(rr.hours), 'pending', cat, nowStr, to, '']);\n    ok.push({ nick, date: rr.dateStr, category: cat, hours: rr.hours, holidayDates });\n  }\n  const parts = [];\n  for (const o of ok) {\n    parts.push('✅ ' + o.nick + '\\n日期：' + o.date + '｜假別：' + o.category + '｜' + hLabel(o.hours));\n    if (o.holidayDates.length) parts.push('⚠️ 提醒：' + o.holidayDates.join('、') + ' 為國定假日（公休），確認是否真的需要請這天的假？');\n  }\n  for (const d of dup) parts.push('⚠️ ' + d.nick + ' 這個假期已登記過囉（' + d.date + '｜' + d.category + '｜' + (d.status==='confirmed'?'已確認':'待假單') + '）');\n  for (const n of nf) parts.push('❓ 找不到「' + n + '」這位同仁，請確認名字');\n  for (const v of vague) parts.push('⏰ ' + v + ' 要請「哪一天」呢？給我日期就好（例：7/1 或 下週二）🙏');\n  for (const s of slipnote) parts.push('📋 ' + s + ' 的假單我收到「圖片」就會自動處理哦～若要用文字補登請假，請給「日期＋假別」（例：' + s + ' 昨天 病假）🙏');\n  const head = ok.length ? pick(['津日 梅池道報告～ ✅','津日 梅池道 幫你記好囉 ✅','收到收到～ ✅']) : '';\n  const tail = ok.length ? '\\n假單記得要傳哦 🙏' : '';\n  const msg = (head ? head + '\\n' : '') + parts.join('\\n') + tail;\n  return [{ json: { action: rows.length ? 'append' : 'reply', to, message: msg, rows, registered: ok } }];\n}\n\n// ===== 其他：閒聊 / 不相關 =====\nif (sourceType !== 'user' && !mentioned) {\n  return [];\n}\n\n// === SOP 行為式延續：私訊、在 SOP 視窗內、非純打招呼 → 當 SOP 追問（不用再打 /sop）。\n//     放在所有明確功能(綁定/交接/查交接/請假/修改取消)之後 → 做別的事一律優先、自動退出 SOP ===\nif (sourceType === 'user' && wasInSop) {\n  const _greet = /^[\\s。.，,！!？?~～、]*(謝謝|感謝|3q|thx|thanks?|thank you|不客氣|好的?|好喔|好哦|好啊|好呀|了解|收到|ok|okay|讚|棒|辛苦了?|嗨+|哈囉|hi|hello|哈+|早安?|午安|晚安|掰+|bye|拜拜|愛你|沒事|沒了|結束)[你妳您我們大家啦囉喔哦呀耶了嗎呢～~。.!！?？,，、\\s👍🙏😊❤️]*$/i;\n  if (userMessage.trim() && !_greet.test(userMessage.trim())) {\n    let sopAns = '抱歉，SOP 助理暫時無法回應，請稍後再試。';\n    try {\n      const r2 = await this.helpers.httpRequest({\n        method: 'POST', url: 'http://localhost:3345/ask',\n        headers: { 'Content-Type': 'application/json' },\n        body: { sessionId: ev.source.userId, message: userMessage.trim(), client: 'line', followup: true },\n        json: true\n      });\n      if (r2 && r2.answer) sopAns = r2.answer;\n    } catch (e) {}\n    sopArm();\n    return [{ json: { action: 'reply', to, message: sopAns + '\\n\\n（還在問 SOP，要做別的直接說就好）', rows: [] } }];\n  }\n}\n\nlet reply = '';\ntry {\n  const aiResp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://127.0.0.1:8000/v1/chat/completions',\n    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <LOCAL_CHAT_API_KEY>' },\n    body: {\n      model: 'gemma-4-26b-a4b-it-4bit',\n      messages: [\n        { role: 'system', content: '你是 <公司名> 的請假助理，名字叫「津日 梅池道」（諧音：今日沒遲到）。個性活潑可愛、有禮貌、愛用 emoji。用繁體中文「簡短」回覆（最多 2-3 句）。你的本業是幫同事登記請假、查請假、回答請假相關問題。若對方只是打招呼、道謝、稱讚或閒聊，就自然親切地回應，可順帶提一句「有需要請假隨時找我」。絕對不要編造任何請假資料或日期。不要長篇大論。' },\n        { role: 'user', content: userMessage }\n      ],\n      temperature: 0.8\n    },\n    json: true\n  });\n  reply = (aiResp.choices && aiResp.choices[0] && aiResp.choices[0].message.content || '').trim();\n} catch (e) {\n  reply = '';\n}\nif (!reply) reply = '嘿嘿～有需要請假再跟我說哦 😊';\n\nreturn [{ json: { action: 'reply', to, message: reply, rows: [] } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31104,
+        18336
+      ],
+      "id": "6fdb21b5-6d9f-4393-98e2-1f64d4e99790",
+      "name": "大腦"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4e28a2ea-022c-4007-902b-fa407e10139c"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5562b027-60c8-4bc9-8737-2f2550af81fe",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "append",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "88233f8e-2b20-4d22-93ab-37546b1c9777",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "handover_add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "eb968d3b-77a6-482f-899c-fb304b0f85d5",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "handover_update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "54974b83-c8e0-4ff1-a4ed-48995e3ef611",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "bind_user",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c2253b47-678a-46db-b268-6cc8b7a9e2cd",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "newmember_add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        31312,
+        18256
+      ],
+      "id": "f203047f-1b4c-4b57-b3d9-ff9c2ea84f3f",
+      "name": "Switch4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A:I:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\": $json.rows} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        31728,
+        18000
+      ],
+      "id": "743dd4b2-2e65-4b5b-b405-a0f8ea3b13e2",
+      "name": "寫入Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('大腦').first().json;\n\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n\n  if (b.to && b.message) {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: b.to, messages: [{ type: 'text', text: b.message }] }\n    });\n  }\n  return [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31904,
+        17936
+      ],
+      "id": "3c5db832-6b57-459a-93b7-0b6f85c7c04d",
+      "name": "送出LINE2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('大腦').first().json;\n\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n\n  if (b.to && b.message) {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: b.to, messages: [{ type: 'text', text: b.message }] }\n    });\n  }\n  return [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31744,
+        18784
+      ],
+      "id": "396c38b5-6e14-4006-b1b2-3c27f121800e",
+      "name": "送出LINE3"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "859201e8-0b3a-4aff-b751-f23c18f2f5a3"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "00d8d76f-b6ad-446d-9963-71a76fcfd38d",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "add",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        30704,
+        17520
+      ],
+      "id": "e45c5357-9e03-4d9f-8237-30130ea75ec6",
+      "name": "判斷 update 還是 add"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('解析假單結果').first().json;\n\n  const TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\n  \n  if (b.to && b.message) {\n    await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: b.to, messages: [{ type: 'text', text: b.message }] }\n    });\n  }\n  return [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31008,
+        17856
+      ],
+      "id": "f9493ee0-00cd-425a-a69d-4777a7501482",
+      "name": "送出LINE4"
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/employees!A:C",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30384,
+        17536
+      ],
+      "id": "3ccf91af-877e-46db-818c-3cbdad6a07b5",
+      "name": "讀取員工2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/handover!A:E ",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        30480,
+        18336
+      ],
+      "id": "e36b6949-b7a3-437f-9e03-f4763e0fa2a3",
+      "name": "讀取handover",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/handover!A:E:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\":[$json.hRow]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        31728,
+        18176
+      ],
+      "id": "12c4514b-c17b-4983-9433-3364d36f8b59",
+      "name": "寫handover",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/handover!A{{ $json.row }}:E{{ $json.row }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\":[$json.hRow]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        31728,
+        18336
+      ],
+      "id": "f42250b9-698a-4a93-9514-d2335e4f5396",
+      "name": "更新handover",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $('大腦').first().json;\nconst TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\nconst push = async (to, text) => { await this.helpers.httpRequest({ method: 'POST', url: 'https://api.line.me/v2/bot/message/push', headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }, body: { to, messages: [{ type: 'text', text }] } }); };\n\nlet suffix = '';\n// 轉發交接內容給代理人；並把結果告知填寫者\nif (b.agentNick && b.forwardContent) {\n  const empVals = ($('讀取員工').first().json.values) || [];\n  const idMap = {};\n  for (let i = 1; i < empVals.length; i++) { const r = empVals[i]; if (r[1]) idMap[r[1]] = r[2]; }\n  const aUid = idMap[b.agentNick];\n  if (aUid) {\n    const fwd = '📋 你被指定為「' + (b.applicant || '') + '」的代理人\\n請假期間：' + (b.period || '') + '\\n以下是他交接給你的工作：\\n\\n' + b.forwardContent + '\\n\\n💡 有問題可以先打「/sop 你的問題」查公司 SOP，真的查不到再問本人哦～';\n    try { await push(aUid, fwd); suffix = '\\n📨 已把交接同步給代理人 ' + b.agentNick + ' ✅'; }\n    catch (e) { suffix = '\\n⚠️ 想同步給代理人 ' + b.agentNick + '，但傳送失敗了'; }\n  } else {\n    suffix = '\\n⚠️ 代理人「' + b.agentNick + '」還沒綁定，暫時收不到交接～請提醒他私訊我「綁定 暱稱」';\n  }\n}\n\nif (b.to && b.message) { try { await push(b.to, b.message + suffix); } catch (e) {} }\nreturn [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32032,
+        18400
+      ],
+      "id": "ed9cb95d-312e-4315-8624-4e1a694261f8",
+      "name": "送出LINE_交接"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        29248,
+        18528
+      ],
+      "id": "7c37b6ca-52d7-4cce-a4d3-2d8fea07ba57",
+      "name": "每日清理"
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/handover!A:E",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        29424,
+        18528
+      ],
+      "id": "e0f45f5c-9511-412b-a76c-260f73cf58eb",
+      "name": "讀取handover清理",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Phase 7：handover 每日清理 =====\n// 讀整張表 → 濾掉「請假期間結束日 < 今天」的列 → 一次 PUT 整段覆蓋\n// 保留列排前面，過期列位置用空白蓋掉（不數第幾列、不 clear、原子寫入）\n\nconst resp = $('讀取handover清理').first().json;\nconst rows = (resp && resp.values) || [];\n\n// 空表：什麼都不寫\nif (rows.length === 0) {\n  return [{ json: { skip: true, values: [], endRow: 1, removed: 0 } }];\n}\n\nconst header = rows[0];\nconst dataRows = rows.slice(1);\n\n// 今天（Asia/Taipei）轉成 yyyymmdd 數字\nconst now = new Date();\nconst tw = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));\nconst todayNum = tw.getFullYear() * 10000 + (tw.getMonth() + 1) * 100 + tw.getDate();\n\n// 從「請假期間」取結束日（支援 2026/06/12 或 2026/06/12~2026/06/13）\nconst endDateNum = period => {\n  const parts = String(period || '').split(/[~～]/);\n  const last = parts[parts.length - 1].trim();\n  const m = last.match(/(\\d{4})\\/(\\d{1,2})\\/(\\d{1,2})/);\n  if (!m) return null;\n  return (+m[1]) * 10000 + (+m[2]) * 100 + (+m[3]);\n};\n\n// 保留：有姓名 且 結束日 >= 今天（解析不出日期 → 保留，安全優先）\nconst keep = dataRows.filter(r => {\n  if (!r[0]) return false;            // 空列直接丟掉\n  const e = endDateNum(r[1]);\n  if (e === null) return true;        // 看不懂日期就先留著\n  return e >= todayNum;\n});\n\n// 補空白列到原本總列數，讓 PUT 把被移除的列蓋成空白\nconst totalRows = rows.length;\nconst out = [header, ...keep];\nwhile (out.length < totalRows) out.push(['', '', '', '']);\n\nreturn [{ json: {\n  values: out,\n  endRow: out.length,\n  removed: dataRows.length - keep.length,\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        29584,
+        18528
+      ],
+      "id": "013d871f-49cb-4dff-b5b7-56b968266d86",
+      "name": "handover清理"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/handover!A1:E{{ $json.endRow   }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\": $json.values} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        29760,
+        18528
+      ],
+      "id": "3ea8f8b9-7c9b-4288-8e28-785c7d3b9756",
+      "name": "寫回handover",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sop-create",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "f1978625-21e7-40c4-9007-46d3052c3bf2",
+      "name": "Webhook (LIFF 表單)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        29248,
+        19040
+      ],
+      "webhookId": "sop-create-3fa291293c184157"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SOP 建立助理 — AI QA + AI 快速建立（地端模型 via oMLX）\nconst item = $input.first().json;\nconst body = item.body || item;\nconst action = (body.action || '').toString();\nconst req = (o) => this.helpers.httpRequest(o);\n\nconst OMLX = 'http://127.0.0.1:8000/v1/chat/completions';\nconst MODEL = 'gemma-4-26b-a4b-it-4bit';\nasync function chat(system, user, temp) {\n  const r = await req({\n    method: 'POST', url: OMLX,\n    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer <LOCAL_CHAT_API_KEY>' },\n    body: { model: MODEL, temperature: (temp == null ? 0.4 : temp),\n            messages: [ { role: 'system', content: system }, { role: 'user', content: user } ] },\n    json: true\n  });\n  return (r && r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content || '').trim();\n}\nfunction parseJson(raw, fallback) {\n  try { const m = raw.match(/[\\{\\[][\\s\\S]*[\\}\\]]/); if (m) return JSON.parse(m[0]); } catch (e) {}\n  return fallback;\n}\nconst pad = n => String(n).padStart(2, '0');\nconst now = new Date();\nconst todayStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());\n\nfunction contentDump(d) {\n  let t = '標題：' + (d.title||'') + '\\n總結：' + (d.summary||'') + '\\n適用對象：' + (d.who||'') +\n          '\\n適用情境：' + (d.when||'') + '\\n前置：' + [d.pre_sys,d.pre_tool,d.pre_doc].filter(Boolean).join('；') + '\\n步驟：\\n';\n  (d.steps||[]).forEach((s,i)=>{ t += (i+1)+'. '+(s.title||'')+'｜執行人:'+(s.who||'-')+'｜位置:'+(s.where||'-')+\n        '｜動作:'+(s.do||'-')+'｜完成:'+(s.done||'-')+'｜注意:'+(s.note||'-')+'\\n'; });\n  t += '異常處理：' + (d.exc||'') + '\\n';\n  if (d.answers && d.answers.length) t += '使用者補充回答：' + JSON.stringify(d.answers) + '\\n';\n  return t;\n}\nfunction faqText(faqs){\n  if (!faqs || !faqs.length) return '（無）';\n  return faqs.map(f => '**Q：' + (f.q||'') + '**\\nA：' + (f.a||'') + '\\n').join('\\n');\n}\nfunction buildMd(d, faq) {\n  let m = '---\\nnamespace: ' + (d.dept||'未分類') + '\\ndoc_type: SOP\\nversion: \"' + todayStr + '\"\\nowner: \"' + (d.owner||'') + '\"\\n---\\n\\n';\n  m += '# ' + (d.title||'') + '\\n> **重要程度**：' + (d.level||'一般') + '\\n\\n## 一句話核心總結\\n' + (d.summary||'') + '\\n\\n---\\n\\n';\n  m += '## 適用對象\\n| 項目 | 詳細描述 |\\n|------|---------|\\n| 適用對象 | ' + (d.who||'（未填）') + ' |\\n| 適用情境 | ' + (d.when||'（未填）') + ' |\\n\\n---\\n\\n';\n  const pre = [];\n  if (d.pre_sys) pre.push('- **系統權限**：' + d.pre_sys);\n  if (d.pre_tool) pre.push('- **硬體/工具**：' + d.pre_tool);\n  if (d.pre_doc) pre.push('- **必要資料**：' + d.pre_doc);\n  m += '## 前置準備\\n' + (pre.length ? pre.join('\\n') : '（無特殊前置需求）') + '\\n\\n---\\n\\n## 標準步驟\\n';\n  (d.steps||[]).forEach((s,i)=>{\n    m += '### 步驟 ' + (i+1) + '：' + (s.title||'') + '\\n';\n    if (s.who) m += '- **執行人**：' + s.who + '\\n';\n    if (s.where) m += '- **操作位置**：' + s.where + '\\n';\n    if (s.do) m += '- **具體動作**：' + s.do + '\\n';\n    if (s.done) m += '- **完成指標**：' + s.done + '\\n';\n    if (s.note) m += '- **注意事項**：' + s.note + '\\n';\n    m += '\\n';\n  });\n  m += '---\\n\\n## 異常處理\\n' + (d.exc||'（暫無已知異常狀況）') + '\\n\\n---\\n\\n## 常見問題 FAQ\\n' + faq + '\\n\\n---\\n\\n## 維護資訊\\n- **最後更新**：' + todayStr + '\\n- **文件負責人**：' + (d.owner||'') + '\\n';\n  return m;\n}\n\n// 共用：給不懂的人照做 → 挖實際操作細節\nconst PURPOSE = '這個 SOP 系統的用途是：讓「完全不懂的人」來查就能照著做。所以重點放在「新手實際操作會卡住、需要被指路」的具體細節：只要提到任何 工具／表單／系統／檔案／報表／地點／路徑／窗口／聯絡人，就要把「是哪一個、在哪裡找、怎麼進去或取得或開啟、要找誰」講清楚。例如「填需求單」要問/寫清楚「是哪一張需求單？在哪裡找？」。不要問策略性、管理層級、制度面、或顯而易見的問題。';\n\n// ===== AI 快速建立：先理解倒出來的內容，只追問缺的（挖細節、不重複、可換一批） =====\nif (action === 'ai_questions') {\n  const prev = Array.isArray(body.prevQuestions) ? body.prevQuestions.filter(x=>x&&String(x).trim()) : [];\n  const single = !!body.single;\n  const sys = '你是資深 SOP 撰寫顧問。' + PURPOSE +\n    ' 使用者已經用自己的話描述了一個流程（見下方）。請先理解，再針對「描述裡含糊、沒講清楚、新手會卡住」的地方提出追問。' +\n    ' 同一批問題裡，意思重複的只能留一個（不要出現換句話說的重複題）。已經講清楚的不要再問。' +\n    (prev.length ? (' 以下是目前已經有的問題，請「絕對不要再出現意思相同或換句話說的重複」，改從其他還沒問到的細節切入：\\n' + prev.map((q,i)=>(i+1)+'. '+q).join('\\n') + '\\n') : '') +\n    (single ? ' 這次請「只出 1 題」（陣列只放 1 個），且與上面已有的都不同、要更切中新手實際會卡的操作細節（哪個/在哪/找誰/多少）。' : ' 最多 8 題。') +\n    ' 只輸出 JSON 字串陣列，不要編號、不要其他文字、不要程式碼框。範例：[\"問題一\",\"問題二\"]';\n  const usr = '主題：' + (body.topic||'') + '\\n\\n使用者描述：\\n' + (body.dump||'');\n  const arr = parseJson(await chat(sys, usr, (prev.length||single) ? 0.6 : 0.4), []);\n  const questions = Array.isArray(arr) ? arr.filter(x => typeof x === 'string' && x.trim()).slice(0, single ? 1 : 8) : [];\n  return [{ json: { ok: true, action: 'ai_questions', questions } }];\n}\n\n// ===== AI 快速建立：以描述為主 + 補問 + (可選)補充修改 → 結構化 SOP =====\nif (action === 'ai_build') {\n  const sys = '你是 SOP 撰寫專家。' + PURPOSE +\n    ' 以「使用者描述」為主要依據，結合「補充問答」，整理成完整、具體、可實際執行的 SOP。' +\n    ' 要求：①忠實根據使用者提供的內容（不要憑空編造他沒講、也無法合理推得的具體名稱/數字）。' +\n    ' ②每個步驟的「具體動作」要寫到新手能照做：提到的表單/系統/檔案/窗口要寫清楚「是哪一個、在哪裡找、怎麼取得、找誰」（依使用者提供的內容）。' +\n    ' ③FAQ 要站在「完全不懂的新人」角度，列出他實際操作時會卡住、會想問的「怎麼找、是哪一個、在哪裡、找誰、怎麼操作」這類具體問題並給明確答案；不要列策略性、制度性或顯而易見的問題。產 3-5 題、彼此不重複。' +\n    ' 只輸出 JSON：{\"summary\":\"一句話核心總結\",\"who\":\"適用對象\",\"when\":\"適用情境\",\"pre_sys\":\"系統權限\",\"pre_tool\":\"工具\",\"pre_doc\":\"必要文件\",\"steps\":[{\"title\":\"\",\"who\":\"\",\"where\":\"\",\"do\":\"\",\"done\":\"\",\"note\":\"\"}],\"exc\":\"異常處理\",\"faqs\":[{\"q\":\"\",\"a\":\"\"}]}。不要其他文字、不要程式碼框。';\n  const qaText = (body.qa||[]).filter(x=>x && x.a).map(x => 'Q：' + x.q + '\\nA：' + x.a).join('\\n\\n');\n  let usr = '主題：' + (body.topic||'') + '\\n\\n使用者描述：\\n' + (body.dump||'') + (qaText ? ('\\n\\n補充問答：\\n' + qaText) : '');\n  const refine = (body.refine||'').trim(); const prevMd = (body.prevMd||'').trim();\n  if (refine) usr += '\\n\\n【目前已產生的版本】\\n' + prevMd + '\\n\\n【使用者的補充/修改要求】\\n' + refine + '\\n\\n請在「目前已產生的版本」基礎上，依照這個補充/修改要求調整後重新產出；沒被要求改動的部分盡量保留。';\n  const f = parseJson(await chat(sys, usr, 0.3), {});\n  const d = {\n    title: body.topic || '未命名', level: '一般', dept: body.dept || '',\n    owner: body.owner || '', summary: f.summary || '', who: f.who || '', when: f.when || '',\n    pre_sys: f.pre_sys || '', pre_tool: f.pre_tool || '', pre_doc: f.pre_doc || '',\n    steps: Array.isArray(f.steps) ? f.steps : [], exc: f.exc || ''\n  };\n  return [{ json: { ok: true, action: 'ai_build', md: buildMd(d, faqText(f.faqs)) } }];\n}\n\n// ===== 標準模式（自己填）：AI 檢查 + 追問（挖細節）；single=逐題重生一題 =====\nif (action === 'review') {\n  const single = !!body.single;\n  const prev = Array.isArray(body.prevQuestions) ? body.prevQuestions.filter(x=>x&&String(x).trim()) : [];\n  // 逐題重生：只回 1 題，且與已有的都不同（給標準模式的 🔄 換一題用）\n  if (single) {\n    const sys = '你是 SOP 文件審查員。' + PURPOSE +\n      ' 根據使用者填寫的內容，找出「新手照做會卡住、寫得模糊」的地方，只出「1 題」要使用者補答的具體問題（例「填需求單」→「哪張需求單？在哪找？」）。' +\n      (prev.length ? (' 以下問題已經有了，請「絕對不要重複或換句話說」，改從其他還沒問到的細節切入：\\n' + prev.map((q,i)=>(i+1)+'. '+q).join('\\n') + '\\n') : '') +\n      ' 只輸出 JSON 字串陣列且只放 1 個，例：[\"問題\"]，不要其他文字、不要程式碼框。';\n    const arr = parseJson(await chat(sys, contentDump(body), 0.6), []);\n    const questions = Array.isArray(arr) ? arr.filter(x => typeof x === 'string' && x.trim()).slice(0, 1) : [];\n    return [{ json: { ok: true, action: 'review', issues: [], questions, single: true } }];\n  }\n  const sys = '你是 SOP 文件審查員。' + PURPOSE +\n    ' 根據使用者填寫的內容，做兩件事並「只」輸出 JSON：' +\n    ' 1) issues：寫得模糊、缺漏、新手照做會卡住的地方（特別是提到工具/表單/系統/窗口卻沒說「是哪個、在哪找、怎麼取得、找誰」）；' +\n    ' 2) questions：針對這些缺漏要使用者補答的具體問題（例「填需求單」→「哪張需求單？在哪找？」），最多4題、彼此不重複，不要策略性/顯而易見的。' +\n    ' 格式 {\"issues\":[...],\"questions\":[...]}，不要多餘文字、不要程式碼框。';\n  const parsed = parseJson(await chat(sys, contentDump(body), 0.3), { issues: [], questions: [] });\n  return [{ json: { ok: true, action: 'review', issues: parsed.issues || [], questions: parsed.questions || [] } }];\n}\n\n// ===== 自己填：產 FAQ + 組 MD =====\nif (action === 'finalize') {\n  const sys = '你是 SOP 助理。' + PURPOSE +\n    ' 根據使用者填寫的內容，產生「常見問題 FAQ」：站在完全不懂的新人角度，列出他實際操作會卡住、會想問的「怎麼找、是哪一個、在哪裡、找誰、怎麼操作」這類具體問題並給明確答案，不要策略性或顯而易見的。' +\n    ' 只輸出 Markdown，每題格式：\\n**Q：問題**\\nA：答案\\n\\n。產 3-5 題、彼此不重複，不要其他文字。';\n  let faq = '';\n  try { faq = await chat(sys, contentDump(body), 0.5); } catch (e) { faq = ''; }\n  if (!faq) faq = '（FAQ 產生失敗，請稍後再試或由審核者補充）';\n  return [{ json: { ok: true, action: 'finalize', md: buildMd(body, faq) } }];\n}\n\n// ===== 送出待審 =====\nif (action === 'submit') {\n  const STAGING = 'http://localhost:3345/sop-pending';\n  try {\n    const r = await req({ method: 'POST', url: STAGING,\n      headers: { 'Content-Type': 'application/json' },\n      body: { name: body.title, md: body.md, submitter: body.owner, type: 'SOP', op: 'new', source: 'liff' }, json: true });\n    return [{ json: { ok: true, action: 'submit', staged: true, result: r } }];\n  } catch (e) {\n    return [{ json: { ok: false, action: 'submit', staged: false,\n      error: '待審區端點 /sop-pending 連線失敗；md 已附回保存', md: body.md } }];\n  }\n}\n\nreturn [{ json: { ok: false, error: 'unknown action: ' + action } }];\n"
+      },
+      "id": "3a38d0ac-ca57-41ed-ad55-01b13559edf9",
+      "name": "AI QA 處理 (地端模型)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        29424,
+        19040
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f13957ef-d76c-47af-bff0-1eaa5e69288c",
+      "name": "回應表單",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        29584,
+        19040
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3ac0e812-c86d-4a08-8cdc-05c3cf0d97ea",
+      "name": "被呼叫（開始）",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        29248,
+        18688
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A:I",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "023163ce-1caa-419f-9a93-09088b57f7d1",
+      "name": "讀取請假表(fresh)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        29424,
+        18688
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 請假去重合併（整段寫回版）：同一人 + 日期重疊 的非取消重複 → 留分數高的，把多餘那筆標 cancelled\n// 改在記憶體裡標記，最後「整段 A1:I 寫回」（不靠列號點單列，避免抓錯行）。無重複 → 回空陣列、完全不寫。\nconst vals = $input.first().json.values || [];\nif (vals.length < 2) return [];                 // 只有標題或空表 → 不動\n\nconst parseD = s => { const p = String(s).split(' ')[0].trim().split('/').map(Number); return new Date(p[0], p[1]-1, p[2]); };\nconst range = d => { if(!d) return null; const s=String(d); if(s.includes('~')){const a=s.split('~'); return [parseD(a[0]),parseD(a[1])];} const x=parseD(s); return [x,x]; };\nconst overlap = (a,b) => a && b && a[0] <= b[1] && a[1] >= b[0];\nconst rank = s => ({confirmed:3, pending:2, awaiting:1})[s] || 0;\n\nconst header = (vals[0] || []).slice();\n// 資料列正規化成 9 欄（A:I），保留原順序、原內容；保留空白列佔位（維持列數對齊）\nconst data = vals.slice(1).map(r => { const x=(r||[]).slice(); while(x.length<9)x.push(''); return x; });\n\n// 只挑「有名字」的列來比對重複；空白佔位列不參與，但仍保留在輸出裡\nconst idx = data.map((r,i)=>({i,r})).filter(x=>String(x.r[0]||'').trim());\n\nconst used = new Set();\nlet removed = 0;\nfor (let a=0; a<idx.length; a++){\n  if (used.has(idx[a].i)) continue;\n  for (let b=a+1; b<idx.length; b++){\n    if (used.has(idx[b].i)) continue;\n    const A=idx[a].r, B=idx[b].r;\n    if (A[4]==='cancelled' || B[4]==='cancelled') continue;\n    if (String(A[0]) !== String(B[0])) continue;          // 同一個人\n    if ((parseFloat(A[3])||0) + (parseFloat(B[3])||0) <= 8) continue;   // 同日重疊、時數相加≤8h → 視為不同時段(上午+下午)兩筆都留；不靠假別(特休/遞延特休名稱可能不同)\n    if (!overlap(range(A[1]), range(B[1]))) continue;      // 日期重疊\n    const drop = rank(A[4]) >= rank(B[4]) ? idx[b].i : idx[a].i;   // 留分數高的，丟另一個\n    used.add(drop);\n    data[drop][4] = 'cancelled';\n    data[drop][2] = (data[drop][2] || '') + '（系統自動合併重複）';\n    removed++;\n    if (drop === idx[a].i) break;   // a 被丟了 → 跳出內層\n  }\n}\n\nif (removed === 0) return [];        // 沒有重複 → 不寫，避免無謂整段覆寫\nconst out = [header, ...data];\nreturn [{ json: { values: out, endRow: out.length, removed } }];"
+      },
+      "id": "99724966-b427-4390-92cc-c1deaa65c50d",
+      "name": "找重複",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        29584,
+        18688
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/leaves!A1:I{{ $json.endRow }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\": $json.values} }}",
+        "options": {}
+      },
+      "id": "ee6df6eb-1024-43b3-bd7d-23a54813b349",
+      "name": "整段寫回(去重後)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        29760,
+        18688
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "name": "等30秒A",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        31904,
+        18064
+      ],
+      "id": "fda40b57-102a-48f2-afe1-62160f93d514",
+      "webhookId": "dedup-wait-a"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "VM5EWtZgo8JTN94C",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "name": "跑去重合併A",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        32080,
+        18064
+      ],
+      "id": "9fc30211-8c44-4dcd-b301-ec4672ccd277"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "name": "等30秒B",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        31232,
+        17536
+      ],
+      "id": "9c83d5c2-e826-46c3-8ddb-962c08371bcc",
+      "webhookId": "dedup-wait-b"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "VM5EWtZgo8JTN94C",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "name": "跑去重合併B",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        31392,
+        17536
+      ],
+      "id": "ce27335c-df55-4899-bb78-0c3f1e8217ce"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/employees!A{{ $json.empRow }}:C{{ $json.empRow }}?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\":[$json.bindRow]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        31728,
+        18480
+      ],
+      "id": "01099d77-8c3b-43c3-9308-e1fedce5fd70",
+      "name": "寫入員工UserID",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const registered = ($('大腦').first().json.registered) || [];\nif (!registered.length) return [{ json: { skip: true } }];\nconst empVals = ($('讀取員工').first().json.values) || [];\nconst idMap = {};\nfor (let i = 1; i < empVals.length; i++) { const r = empVals[i]; if (r[1]) idMap[r[1]] = r[2]; }\nconst TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\nfor (const o of registered) {\n  const uid = idMap[o.nick];\n  if (!uid) continue;\n  const tpl = ('📋 請假交接單（請完整複製整段文字、填好後回傳，標題別刪哦）\\n\\n姓名：{NICK}\\n請假期間：{DATE}\\n代理人：\\n----------------------\\n📝 交接工作：\\n⚠️ 注意事項：\\n✏️ 其他（可自訂內容）：').replace('{NICK}', o.nick).replace('{DATE}', o.date);\n  try {\n    await this.helpers.httpRequest({ method: 'POST', url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: uid, messages: [{ type: 'text', text: tpl }] } });\n  } catch (e) {}\n}\nreturn [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32080,
+        17936
+      ],
+      "id": "ffcf2397-125a-4e8d-a29f-81410bca6f4c",
+      "name": "私訊交接模板"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ops = ($('解析假單結果').all() || []).map(x => x.json).filter(o => o && o.action === 'add' && Array.isArray(o.values));\nif (!ops.length) return [{ json: { skip: true } }];\nconst empVals = ($('讀取員工2').first().json.values) || [];\nconst idMap = {};\nfor (let i = 1; i < empVals.length; i++) { const r = empVals[i]; if (r[1]) idMap[r[1]] = r[2]; }\nconst TOKEN = '<LINE_CHANNEL_ACCESS_TOKEN>';\nfor (const o of ops) {\n  const nick = o.values[0], date = o.values[1];\n  const uid = idMap[nick];\n  if (!uid) continue;\n  const tpl = ('📋 請假交接單（請完整複製整段文字、填好後回傳，標題別刪哦）\\n\\n姓名：{NICK}\\n請假期間：{DATE}\\n代理人：\\n----------------------\\n📝 交接工作：\\n⚠️ 注意事項：\\n✏️ 其他（可自訂內容）：').replace('{NICK}', nick).replace('{DATE}', date);\n  try {\n    await this.helpers.httpRequest({ method: 'POST', url: 'https://api.line.me/v2/bot/message/push',\n      headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },\n      body: { to: uid, messages: [{ type: 'text', text: tpl }] } });\n  } catch (e) {}\n}\nreturn [{ json: { sent: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31408,
+        17728
+      ],
+      "id": "fa526f31-00ff-4e5a-989c-036370cbcb1f",
+      "name": "私訊模板(假單)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/<GOOGLE_SHEET_ID>/values/employees!A:C:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"values\":[$json.empRow2]} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        31728,
+        18624
+      ],
+      "id": "265d3e0e-a5ef-4933-a8c1-9c1551f85125",
+      "name": "新增員工",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<N8N_GOOGLE_SHEETS_CREDENTIAL_ID>",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "每日早報": {
+      "main": [
+        [
+          {
+            "node": "讀取今日請假",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取今日請假": {
+      "main": [
+        [
+          {
+            "node": "格式化並發送早報",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "立即回應",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "立即回應": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "處理輸入": {
+      "main": [
+        [
+          {
+            "node": "讀取 Sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemma 4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "文字請假Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "文字請假Agent": {
+      "main": [
+        [
+          {
+            "node": "大腦",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "取得圖片": {
+      "main": [
+        [
+          {
+            "node": "OCR 解析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "取得圖片",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "處理輸入",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR 解析": {
+      "main": [
+        [
+          {
+            "node": "讀取 Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取 Sheet": {
+      "main": [
+        [
+          {
+            "node": "讀取員工2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取 Sheet1": {
+      "main": [
+        [
+          {
+            "node": "讀取員工",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "格式化資料1": {
+      "main": [
+        [
+          {
+            "node": "文字請假Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析假單結果": {
+      "main": [
+        [
+          {
+            "node": "判斷 update 還是 add",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新Sheet": {
+      "main": [
+        [
+          {
+            "node": "送出LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增Sheet": {
+      "main": [
+        [
+          {
+            "node": "送出LINE1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "等30秒B",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "私訊模板(假單)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新 Sheet": {
+      "main": [
+        [
+          {
+            "node": "送出Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取員工": {
+      "main": [
+        [
+          {
+            "node": "讀取handover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "大腦": {
+      "main": [
+        [
+          {
+            "node": "Switch4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch4": {
+      "main": [
+        [
+          {
+            "node": "更新 Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "寫入Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "寫handover",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "更新handover",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "寫入員工UserID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "新增員工",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "送出LINE3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "寫入Sheet": {
+      "main": [
+        [
+          {
+            "node": "送出LINE2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "等30秒A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判斷 update 還是 add": {
+      "main": [
+        [
+          {
+            "node": "更新Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "新增Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "送出LINE4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取員工2": {
+      "main": [
+        [
+          {
+            "node": "解析假單結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取handover": {
+      "main": [
+        [
+          {
+            "node": "格式化資料1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "寫handover": {
+      "main": [
+        [
+          {
+            "node": "送出LINE_交接",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新handover": {
+      "main": [
+        [
+          {
+            "node": "送出LINE_交接",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "每日清理": {
+      "main": [
+        [
+          {
+            "node": "讀取handover清理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取handover清理": {
+      "main": [
+        [
+          {
+            "node": "handover清理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "handover清理": {
+      "main": [
+        [
+          {
+            "node": "寫回handover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (LIFF 表單)": {
+      "main": [
+        [
+          {
+            "node": "AI QA 處理 (地端模型)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI QA 處理 (地端模型)": {
+      "main": [
+        [
+          {
+            "node": "回應表單",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "被呼叫（開始）": {
+      "main": [
+        [
+          {
+            "node": "讀取請假表(fresh)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "讀取請假表(fresh)": {
+      "main": [
+        [
+          {
+            "node": "找重複",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "找重複": {
+      "main": [
+        [
+          {
+            "node": "整段寫回(去重後)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "等30秒A": {
+      "main": [
+        [
+          {
+            "node": "跑去重合併A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "等30秒B": {
+      "main": [
+        [
+          {
+            "node": "跑去重合併B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "寫入員工UserID": {
+      "main": [
+        [
+          {
+            "node": "送出LINE_交接",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增員工": {
+      "main": [
+        [
+          {
+            "node": "送出LINE_交接",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "送出LINE2": {
+      "main": [
+        [
+          {
+            "node": "私訊交接模板",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "990abd7b-ae05-4d21-ba7d-0b279f24a13a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8fe9bdd00fa5711db96fa2548c7f1b37fbbfce24763daa375a346878e873656d"
+  },
+  "id": "VM5EWtZgo8JTN94C",
+  "tags": []
+}

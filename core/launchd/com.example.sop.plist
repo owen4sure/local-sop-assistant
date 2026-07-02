@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- backend 開機常駐（macOS launchd）。所有 <...> 換成你的真實路徑/埠。
+     機密（審核密碼、CHAT_API_KEY）走專案 .env 或 .review-password，勿寫在此。 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.sop</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string><NODE_BIN>/node</string>
+        <string><HOME>/ai-sop/sop-service/server.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string><HOME>/ai-sop/sop-service</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string><NODE_BIN>:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>OLLAMA_URL</key>
+        <string>http://127.0.0.1:11434</string>
+        <!-- 其餘設定建議放 .env 由程式讀；或在此加 <key>PORT</key><string><PORT></string> 等。 -->
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardErrorPath</key><string><HOME>/ai-sop/logs/server.err</string>
+    <key>StandardOutPath</key><string><HOME>/ai-sop/logs/server.out</string>
+</dict>
+</plist>

@@ -1,0 +1,71 @@
+{
+  "name": "SOP 投稿 → 待審 (sop-create)",
+  "_comment": "依實際流程邏輯重建的乾淨版：收 LINE/網頁表單投稿 → 整理成 backend /sop-pending 的 body → POST。已移除所有 credential / token / 真實 webhook 網址 / SheetID。所有 <...> 為佔位符。匯入 n8n 後需自行設定 webhook 路徑與（如有）憑證。",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "<WEBHOOK_PATH>",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook (投稿入口)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "_comment": "來源：①LINE bot（經 messaging webhook 轉入）②網頁/LIFF 表單。真實 path/webhookId 已移除。"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// 把不同入口（LINE / 表單）的欄位，統一映射成 backend /sop-pending 的 body。\n// 欄位：name(標題), md(內容), submitter, type(SOP|FAQ|Ref), op(new|modify|delete), source.\nconst b = $input.first().json.body || $input.first().json;\nreturn [{ json: {\n  name: b.title || b.name || '',\n  md: b.md || b.content || '',\n  submitter: b.submitter || b.user || '匿名',\n  type: b.type || 'SOP',\n  op: b.op || 'new',\n  source: b.source || 'n8n',\n  reason: b.reason || ''\n} }];"
+      },
+      "id": "node-map",
+      "name": "整理欄位",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:<PORT>/sop-pending",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {},
+        "_comment": "backend 與 n8n 同機 → 直接打 localhost，不需走對外通道。投稿只進待審區，不會直接上架。"
+      },
+      "id": "node-post",
+      "name": "POST /sop-pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, id: $json.id, badge: $json.precheck && $json.precheck.badge } }}",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "回覆投稿者",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [960, 300],
+      "_comment": "把待審編號 + AI 預檢紅綠燈回給投稿者（LINE 訊息 / 表單結果）。"
+    }
+  ],
+  "connections": {
+    "Webhook (投稿入口)": { "main": [[{ "node": "整理欄位", "type": "main", "index": 0 }]] },
+    "整理欄位": { "main": [[{ "node": "POST /sop-pending", "type": "main", "index": 0 }]] },
+    "POST /sop-pending": { "main": [[{ "node": "回覆投稿者", "type": "main", "index": 0 }]] }
+  },
+  "settings": {},
+  "_notes": [
+    "若 LINE 入口：在 Webhook 前另接 LINE messaging webhook 驗證 + 解析訊息（channel secret/access token 用 n8n credential 管理，勿寫進節點）。",
+    "若原流程有把投稿同步寫進 Google Sheet 稽核：另加一個 Google Sheets 節點（用 n8n credential + 你自己的 <SHEET_ID>），本範本已省略以免帶出真實 SheetID。",
+    "問答（非投稿）走另一條：Webhook → HTTP Request POST http://localhost:<PORT>/ask (body {message, client:'line', sessionId}) → 回 answer。"
+  ]
+}

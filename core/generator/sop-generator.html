@@ -1,0 +1,2262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP 文件生成器</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  background: #f0f4ff;
+  color: #2d3748;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.app-header {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+}
+.app-header h1 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.back-link {
+  font-size: 13px; color: rgba(255,255,255,0.75); text-decoration: none; padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; transition: all 0.15s; background: rgba(255,255,255,0.08);
+}
+.back-link:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.35); }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 16px; transition: all 0.15s; color: rgba(255,255,255,0.8);
+}
+.icon-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); color: #fff; }
+
+/* ── Main wrapper ── */
+.main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px 100px;
+}
+
+/* ── Type Select ── */
+.type-select-page { text-align: center; padding: 24px 0 12px; }
+.type-select-page h2 { font-size: 26px; font-weight: 800; margin-bottom: 10px; color: #0f172a; letter-spacing: -0.5px; }
+.type-select-page > p { color: #64748b; font-size: 15px; margin-bottom: 40px; }
+.type-cards { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+
+.type-card {
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 32px 26px 28px;
+  width: 260px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+.type-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: 20px 20px 0 0;
+  background: #e2e8f0;
+  transition: background 0.2s;
+}
+.type-card:hover { border-color: transparent; box-shadow: 0 8px 32px rgba(0,0,0,0.12); transform: translateY(-4px); }
+.type-card.sop-card:hover::before, .type-card.sop-card::before { background: linear-gradient(90deg, #4f8ef7, #6366f1); }
+.type-card.sop-card:hover { box-shadow: 0 8px 32px rgba(79,142,247,0.2); }
+.type-card.ref-card:hover::before, .type-card.ref-card::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.type-card.ref-card:hover { box-shadow: 0 8px 32px rgba(139,92,246,0.2); }
+.type-card.ai-card:hover::before, .type-card.ai-card::before { background: linear-gradient(90deg, #f59e0b, #fb923c); }
+.type-card.ai-card:hover { box-shadow: 0 8px 32px rgba(245,158,11,0.2); }
+
+.type-card .icon-wrap {
+  width: 56px; height: 56px; border-radius: 14px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+}
+.sop-card .icon-wrap { background: #eff6ff; }
+.ref-card .icon-wrap { background: #f5f3ff; }
+.ai-card .icon-wrap { background: #fffbeb; }
+.type-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: #0f172a; }
+.type-card p { font-size: 13px; color: #64748b; line-height: 1.65; }
+.type-card .tag {
+  display: inline-block; margin-top: 16px; font-size: 11px; padding: 4px 10px;
+  background: #eff6ff; color: #3b82f6; border-radius: 20px; font-weight: 600; letter-spacing: 0.2px;
+}
+.ref-card .tag { background: #f5f3ff; color: #7c3aed; }
+.tag.warn { background: #fff7ed; color: #c05621; border: 1px solid #fed7aa; }
+
+/* ── Progress bar ── */
+.progress-wrap { margin-bottom: 28px; background: #fff; border-radius: 12px; padding: 14px 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.progress-steps { display: flex; align-items: center; overflow-x: auto; padding: 2px 0; }
+.progress-step { display: flex; align-items: center; flex-shrink: 0; }
+.step-dot {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  background: #e2e8f0; color: #94a3b8; transition: all 0.25s;
+}
+.step-dot.active { background: linear-gradient(135deg, #4f8ef7, #6366f1); color: #fff; box-shadow: 0 0 0 4px rgba(79,142,247,0.2); }
+.step-dot.done { background: linear-gradient(135deg, #34d399, #059669); color: #fff; }
+.step-label { font-size: 11px; color: #94a3b8; margin: 0 6px; white-space: nowrap; transition: all 0.2s; }
+.step-label.active { color: #4f8ef7; font-weight: 700; }
+.step-label.done { color: #059669; }
+.step-connector { width: 28px; height: 2px; background: #e2e8f0; flex-shrink: 0; transition: all 0.2s; }
+.step-connector.done { background: linear-gradient(90deg, #34d399, #059669); }
+
+/* ── Card ── */
+.card {
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 36px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.card-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; color: #0f172a; letter-spacing: -0.3px; }
+.card-subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+
+/* ── Form elements ── */
+.form-group { margin-bottom: 22px; }
+label, .form-label {
+  display: block; font-size: 13px; font-weight: 600; color: #374151;
+  margin-bottom: 7px;
+}
+.form-label .req { color: #ef4444; margin-left: 2px; }
+.form-label .hint { font-weight: 400; color: #9ca3af; font-size: 12px; margin-left: 6px; }
+.form-hint { font-size: 12px; color: #94a3b8; margin-bottom: 7px; line-height: 1.5; }
+.form-input, .form-textarea, .form-select, textarea.form-input {
+  width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  font-size: 14px; color: #1e293b; background: #f8fafc; outline: none;
+  transition: all 0.15s; font-family: inherit;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus, textarea.form-input:focus {
+  border-color: #4f8ef7; background: #fff; box-shadow: 0 0 0 3px rgba(79,142,247,0.12);
+}
+.form-textarea { resize: vertical; min-height: 80px; line-height: 1.65; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+.radio-label {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 13px; color: #475569; padding: 7px 14px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px; transition: all 0.15s; background: #f8fafc;
+}
+.radio-label:hover { border-color: #4f8ef7; background: #fff; }
+.radio-label input { display: none; }
+.radio-label.selected { border-color: #4f8ef7; background: #eff6ff; color: #3b82f6; font-weight: 600; }
+
+/* ── Step Image Upload ── */
+.step-img-area { border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 12px; background: #fff; margin-top: 10px; }
+.step-img-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.step-img-tab { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; transition: all 0.15s; }
+.step-img-tab.active { border-color: #4f8ef7; background: #eff6ff; color: #2563eb; }
+.step-img-previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.step-img-item { position: relative; display: inline-block; }
+.step-img-item img { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer; }
+.step-img-item img:hover { opacity: 0.85; }
+.step-img-del { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: #fff; border: none; border-radius: 50%; cursor: pointer; font-size: 10px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.step-img-caption { font-size: 10px; color: #9ca3af; text-align: center; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Dynamic cards ── */
+.dynamic-section { margin-bottom: 20px; }
+.dynamic-cards { display: flex; flex-direction: column; gap: 14px; }
+.dynamic-card {
+  border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 20px;
+  background: #f8fafc; position: relative;
+}
+.dynamic-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.dynamic-card-title { font-size: 13px; font-weight: 700; color: #374151; }
+.remove-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: none; background: #fee2e2;
+  color: #ef4444; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 15px; transition: all 0.15s; flex-shrink: 0;
+}
+.remove-btn:hover { background: #fca5a5; color: #b91c1c; }
+.add-btn {
+  display: flex; align-items: center; gap: 6px; padding: 10px 16px;
+  border: 2px dashed #cbd5e1; border-radius: 10px; background: transparent;
+  color: #64748b; font-size: 13px; cursor: pointer; transition: all 0.15s;
+  width: 100%; justify-content: center; font-family: inherit; font-weight: 500;
+}
+.add-btn:hover { border-color: #4f8ef7; color: #4f8ef7; background: #eff6ff; }
+
+/* ── FAQ section ── */
+.faq-item { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; }
+.faq-item-header { display: flex; justify-content: space-between; align-items: center; }
+.faq-q-label { font-size: 12px; font-weight: 700; color: #4f8ef7; text-transform: uppercase; letter-spacing: 0.5px; }
+.ai-btn {
+  display: flex; align-items: center; gap: 7px; padding: 10px 20px;
+  border-radius: 10px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; font-family: inherit; box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+}
+.ai-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(102,126,234,0.4); }
+.ai-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.ai-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ai-bar-note { font-size: 12px; color: #9ca3af; }
+
+/* ── Navigation buttons ── */
+.nav-btns {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 32px; padding-top: 24px; border-top: 1px solid #f0f4f8;
+}
+.btn-prev {
+  padding: 11px 24px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: #fff; color: #64748b; font-size: 14px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.btn-prev:hover { border-color: #cbd5e1; background: #f8fafc; color: #374151; }
+.btn-next {
+  padding: 11px 30px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #4f8ef7, #6366f1); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; box-shadow: 0 2px 8px rgba(79,142,247,0.3);
+}
+.btn-next:hover { box-shadow: 0 6px 16px rgba(79,142,247,0.4); transform: translateY(-1px); }
+.btn-next.danger { background: linear-gradient(135deg, #34d399, #059669); box-shadow: 0 2px 8px rgba(5,150,105,0.3); }
+.btn-next.danger:hover { box-shadow: 0 6px 16px rgba(5,150,105,0.4); }
+
+/* ── AI Review Step ── */
+.review-issue {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 16px; border-radius: 10px; margin-bottom: 10px;
+  font-size: 13.5px; line-height: 1.5;
+}
+.review-error { background: #fff1f2; border: 1px solid #fecdd3; }
+.review-warning { background: #fffbeb; border: 1px solid #fde68a; }
+.review-badge { font-size: 12px; font-weight: 700; white-space: nowrap; padding-top: 1px; }
+.review-field { font-weight: 600; color: #374151; white-space: nowrap; }
+.review-msg { color: #4b5563; }
+.review-pass {
+  text-align: center; padding: 28px; background: #f0fdf4; border: 1px solid #bbf7d0;
+  border-radius: 12px; font-size: 15px; font-weight: 600; color: #15803d;
+}
+.review-actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+.btn-skip {
+  flex: 1; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  border: 1.5px solid #cbd5e1; background: #fff; color: #64748b; cursor: pointer; transition: all 0.15s;
+}
+.btn-skip:hover { background: #f1f5f9; color: #374151; }
+
+/* ── Complete page ── */
+.complete-page { text-align: center; padding: 16px 0; }
+.complete-icon { font-size: 64px; margin-bottom: 16px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1)); }
+.complete-page h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: #0f172a; }
+.complete-page > p { color: #64748b; font-size: 14px; margin-bottom: 28px; }
+.filename-row {
+  display: flex; align-items: center; gap: 8px; max-width: 500px;
+  margin: 0 auto 24px; background: #f8fafc; border: 2px solid #e2e8f0;
+  border-radius: 12px; padding: 8px 8px 8px 16px; transition: border-color 0.15s;
+}
+.filename-row:focus-within { border-color: #4f8ef7; box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
+.filename-row input {
+  flex: 1; border: none; background: transparent; font-size: 14px;
+  color: #1e293b; outline: none; font-family: inherit; font-weight: 500;
+}
+.filename-ext { font-size: 13px; color: #64748b; font-weight: 600; white-space: nowrap; background: #e2e8f0; padding: 5px 10px; border-radius: 6px; }
+.md-preview-wrap { margin: 0 auto 28px; max-width: 640px; text-align: left; }
+.md-preview-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; background: #f1f5f9; border-radius: 10px;
+  cursor: pointer; font-size: 13px; color: #374151; font-weight: 600;
+  border: 1.5px solid #e2e8f0; user-select: none; transition: background 0.15s;
+}
+.md-preview-toggle:hover { background: #e8edf3; }
+.md-preview-content {
+  display: none; background: #0f1117; color: #e2e8f0; font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 12px; padding: 20px; border-radius: 0 0 10px 10px; white-space: pre-wrap;
+  word-break: break-all; max-height: 420px; overflow-y: auto;
+  border: 1.5px solid #e2e8f0; border-top: none; line-height: 1.7;
+}
+.md-preview-content.open { display: block; }
+.action-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-download {
+  padding: 13px 28px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #4f8ef7, #6366f1); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; box-shadow: 0 2px 8px rgba(79,142,247,0.3);
+  display: flex; align-items: center; gap: 7px;
+}
+.btn-download:hover { box-shadow: 0 6px 20px rgba(79,142,247,0.4); transform: translateY(-1px); }
+.btn-upload {
+  padding: 13px 28px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #34d399, #059669); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; box-shadow: 0 2px 8px rgba(5,150,105,0.25);
+  display: flex; align-items: center; gap: 7px;
+}
+.btn-upload:hover { box-shadow: 0 6px 20px rgba(5,150,105,0.4); transform: translateY(-1px); }
+.btn-upload:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-restart {
+  padding: 13px 24px; border-radius: 12px; border: 1.5px solid #e2e8f0;
+  background: #fff; color: #64748b; font-size: 14px; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.btn-restart:hover { background: #f8fafc; border-color: #cbd5e1; color: #374151; }
+.upload-msg { margin-top: 14px; font-size: 13px; line-height: 1.6; }
+.upload-msg.ok { color: #059669; }
+.upload-msg.err { color: #dc2626; }
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+  z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #fff; border-radius: 20px; padding: 32px; width: 440px;
+  max-width: calc(100vw - 40px); box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-title { font-size: 17px; font-weight: 800; color: #0f172a; }
+.modal-close { cursor: pointer; font-size: 20px; color: #94a3b8; background: none; border: none; padding: 2px; transition: color 0.15s; }
+.modal-close:hover { color: #334155; }
+.modal-section { margin-bottom: 18px; }
+.modal-section-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.modal-info { font-size: 13px; color: #374151; padding: 10px 14px; background: #f1f5f9; border-radius: 8px; }
+.modal-link { display: block; margin-top: 12px; font-size: 13px; color: #4f8ef7; text-decoration: none; font-weight: 500; }
+.modal-link:hover { text-decoration: underline; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: #0f172a; color: #fff; padding: 11px 22px; border-radius: 24px;
+  font-size: 13px; z-index: 2000; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: none; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Draft banner ── */
+.draft-banner {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a;
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-size: 13px; color: #92400e;
+}
+.draft-banner-actions { display: flex; gap: 8px; }
+.draft-btn-y {
+  padding: 6px 16px; border: none; border-radius: 8px; background: #d97706;
+  color: #fff; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600;
+}
+.draft-btn-y:hover { background: #b45309; }
+.draft-btn-n {
+  padding: 6px 16px; border: 1px solid #d97706; border-radius: 8px; background: transparent;
+  color: #d97706; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600;
+}
+.draft-btn-n:hover { background: #fef3c7; }
+
+/* ── Spinner ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+
+/* ── Info-ref category tag ── */
+.cat-select { max-width: 200px; }
+
+/* ── AI Quick Create ── */
+.ai-warning {
+  background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 24px; font-size: 13px; color: #92400e;
+  display: flex; gap: 10px; line-height: 1.65;
+}
+.ai-warning strong { font-weight: 700; }
+.question-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, #4f8ef7, #6366f1);
+  color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+}
+.question-item { display: flex; flex-direction: column; gap: 8px; }
+.question-label { font-size: 14px; font-weight: 600; color: #0f172a; display: flex; gap: 10px; align-items: flex-start; }
+.questions-list { display: flex; flex-direction: column; gap: 20px; }
+.btn-back { padding: 10px 18px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; color: #64748b; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.15s; font-weight: 500; }
+.btn-back:hover { background: #f8fafc; border-color: #cbd5e1; color: #374151; }
+.btn-primary { padding: 11px 24px; border: none; border-radius: 10px; background: linear-gradient(135deg, #4f8ef7, #6366f1); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; box-shadow: 0 2px 8px rgba(79,142,247,0.3); }
+.btn-primary:hover { box-shadow: 0 6px 16px rgba(79,142,247,0.4); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.inline-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #e2e8f0; border-top-color: #4f8ef7; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .type-cards { flex-direction: column; align-items: center; }
+  .card { padding: 22px 18px; }
+  .progress-step .step-label { display: none; }
+  .type-card { width: 100%; max-width: 340px; }
+  .action-btns { flex-direction: column; align-items: center; }
+  .btn-download, .btn-upload, .btn-restart { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <h1>🛠️ SOP 文件生成器</h1>
+  <div class="header-actions">
+    <a href="./agent-optimizer.html" class="back-link">⚡ Agent 轉換器</a>
+    <a href="./index.html" class="back-link">← 回 SOP 助理</a>
+    <button class="icon-btn" onclick="openSettings()" title="設定">⚙️</button>
+  </div>
+</header>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Settings modal（AI 走本機後端，不需金鑰；僅保留草稿管理）-->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ 設定</span>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-info">AI 生成由 Mac Mini 本地模型處理，不需設定任何 API Key。</div>
+    </div>
+    <div class="modal-section">
+      <button onclick="clearDraft()" style="padding:7px 16px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#ef4444;font-size:13px;cursor:pointer;font-family:inherit;">🗑 清除草稿</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main" id="appRoot"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+// （已移除 Google Drive FOLDER_ID — 改走本機 backend /sop-files）
+const DRAFT_KEY = 'sop_generator_draft';
+
+const SOP_STEPS = ['基本資訊', '適用對象', '前置準備', '標準步驟', '異常處理', 'FAQ', '維護資訊', 'AI 審核', '完成'];
+const REF_STEPS = ['基本資訊', '資訊內容', 'FAQ', 'AI 審核', '完成'];
+
+// ── State ──────────────────────────────────────────────────
+let docType = null; // 'sop' | 'ref' | 'ai'
+let currentStep = 0;
+let sopData = {};
+let refData = {};
+let aiData = { topic: '', questions: [], answers: [], generatedMd: '' };
+let aiStep = 0; // 0=topic input, 1=questions, 2=complete
+
+// ── Helpers ────────────────────────────────────────────────
+// AI 生成已改用 Mac Mini 本地模型，不需要 API Key。回傳固定 placeholder 讓既有的
+// 「沒有 key 就擋下」檢查一律通過。
+function getApiKeys() {
+  return ['local'];
+}
+
+function loadSettings() {
+  return {
+    provider: 'local',
+    model: 'local',
+    apiKey: 'local'
+  };
+}
+
+function toast(msg, duration = 2400) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function v(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function sv(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val || '';
+}
+
+// ── Draft ──────────────────────────────────────────────────
+let _lastDraftQuotaWarn = 0;
+function saveDraft() {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      docType, currentStep, sopData, refData,
+      aiData, aiStep,
+      ts: Date.now()
+    }));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError' || /quota/i.test(e.message || '')) {
+      // 避免每次按下一步都提醒 → 最多 30 秒一次
+      const now = Date.now();
+      if (now - _lastDraftQuotaWarn > 30000) {
+        _lastDraftQuotaWarn = now;
+        toast('⚠ 草稿過大無法儲存（瀏覽器空間滿）。請減少圖片或先下載備份', 5000);
+      }
+      console.warn('Draft save failed: quota exceeded');
+    } else {
+      console.warn('Draft save failed:', e);
+    }
+  }
+}
+
+function loadDraftData() {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch(e) { return null; }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  toast('草稿已清除');
+  closeSettings();
+}
+
+// ── Collect form data helpers ──────────────────────────────
+function collectRadio(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : '';
+}
+
+// ── Render ─────────────────────────────────────────────────
+function render() {
+  _clearSectionCache?.(); // 每次重新 render 清掉舊的 section image cache，避免 step 順序變動造成錯位
+  const root = document.getElementById('appRoot');
+  root.innerHTML = '';
+
+  if (!docType) {
+    root.appendChild(renderTypeSelect());
+    return;
+  }
+
+  // AI Quick Create — separate flow
+  if (docType === 'ai') {
+    if (aiStep === 2) {
+      root.appendChild(renderComplete());
+    } else {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = aiStep === 0 ? renderAiTopicStep() : renderAiQuestionsStep();
+      root.appendChild(card);
+    }
+    return;
+  }
+
+  const steps = docType === 'sop' ? SOP_STEPS : REF_STEPS;
+  const lastStep = steps.length - 1;
+
+  if (currentStep === lastStep) {
+    root.appendChild(renderComplete());
+    return;
+  }
+
+  // Progress
+  root.appendChild(renderProgressBar(steps));
+
+  // Step content
+  const card = document.createElement('div');
+  card.className = 'card';
+  if (docType === 'sop') {
+    card.innerHTML = renderSopStep(currentStep);
+  } else {
+    card.innerHTML = renderRefStep(currentStep);
+  }
+  root.appendChild(card);
+
+  // Nav
+  root.appendChild(renderNavBtns(currentStep, lastStep));
+
+  // Re-attach dynamic interactions
+  attachRadioHandlers();
+
+  // Restore data
+  restoreStep();
+}
+
+// ── Type select page ───────────────────────────────────────
+function renderTypeSelect() {
+  const wrap = document.createElement('div');
+
+  // Check for draft
+  const draft = loadDraftData();
+  if (draft && draft.docType) {
+    const banner = document.createElement('div');
+    banner.className = 'draft-banner';
+    banner.innerHTML = `
+      <span>📝 發現未完成的草稿（${new Date(draft.ts).toLocaleDateString('zh-TW')} ${new Date(draft.ts).toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'})}），是否繼續填寫？</span>
+      <div class="draft-banner-actions">
+        <button class="draft-btn-y" onclick="resumeDraft()">繼續</button>
+        <button class="draft-btn-n" onclick="discardDraft()">捨棄</button>
+      </div>`;
+    wrap.appendChild(banner);
+  }
+
+  const page = document.createElement('div');
+  page.className = 'type-select-page';
+  page.innerHTML = `
+    <h2>請選擇要建立的文件類型</h2>
+    <p>根據內容性質選擇最合適的格式，完成後可一鍵匯出 .md 並儲存到 Mac Mini</p>
+    <div class="type-cards">
+      <div class="type-card sop-card" onclick="selectDocType('sop')">
+        <div class="icon-wrap">📋</div>
+        <h3>完整 SOP</h3>
+        <p>有明確執行步驟的業務程序，例如報帳、請款、請假、開戶流程等</p>
+        <div class="tag">7 大區塊 · 步驟 / 異常處理</div>
+      </div>
+      <div class="type-card ref-card" onclick="selectDocType('ref')">
+        <div class="icon-wrap">📌</div>
+        <h3>資訊參考</h3>
+        <p>「某資料去哪找」「某東西怎麼取得」「某系統帳號申請」等純資訊類文件</p>
+        <div class="tag">3 大區塊 · 輕量快速</div>
+      </div>
+      <div class="type-card ai-card" onclick="selectDocType('ai')">
+        <div class="icon-wrap">🤖</div>
+        <h3>AI 快速建立</h3>
+        <p>描述主題，AI 提問釐清細節，自動生成文件。省去逐一填表步驟。</p>
+        <div class="tag warn">⚠️ 不適合複雜多步驟流程</div>
+      </div>
+    </div>`;
+  wrap.appendChild(page);
+  return wrap;
+}
+
+function selectDocType(type) {
+  docType = type;
+  currentStep = 0;
+  sopData = {};
+  refData = {};
+  if (type === 'ai') {
+    aiData = { topic: '', questions: [], answers: [], generatedMd: '' };
+    aiStep = 0;
+  }
+  render();
+}
+
+function resumeDraft() {
+  const draft = loadDraftData();
+  if (!draft) return;
+  docType = draft.docType;
+  currentStep = draft.currentStep;
+  sopData = draft.sopData || {};
+  refData = draft.refData || {};
+  aiData = draft.aiData || { topic: '', questions: [], answers: [], generatedMd: '', images: [] };
+  aiStep = draft.aiStep || 0;
+  render();
+}
+
+function discardDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.querySelector('.draft-banner')?.remove();
+}
+
+// ── Progress bar ───────────────────────────────────────────
+function renderProgressBar(steps) {
+  const wrap = document.createElement('div');
+  wrap.className = 'progress-wrap';
+  const inner = document.createElement('div');
+  inner.className = 'progress-steps';
+  steps.forEach((label, i) => {
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'progress-step';
+    const dotClass = i < currentStep ? 'done' : (i === currentStep ? 'active' : '');
+    const lblClass = i < currentStep ? 'done' : (i === currentStep ? 'active' : '');
+    stepDiv.innerHTML = `<div class="step-dot ${dotClass}">${i < currentStep ? '✓' : i + 1}</div>
+      <span class="step-label ${lblClass}">${label}</span>`;
+    inner.appendChild(stepDiv);
+    if (i < steps.length - 1) {
+      const conn = document.createElement('div');
+      conn.className = 'step-connector' + (i < currentStep ? ' done' : '');
+      inner.appendChild(conn);
+    }
+  });
+  wrap.appendChild(inner);
+  return wrap;
+}
+
+// ── Nav buttons ────────────────────────────────────────────
+function renderNavBtns(step, lastContentStep) {
+  const wrap = document.createElement('div');
+  wrap.className = 'nav-btns';
+  if (step > 0) {
+    wrap.innerHTML += `<button class="btn-prev" onclick="prevStep()">← 上一步</button>`;
+  } else {
+    wrap.innerHTML += `<button class="btn-prev" onclick="goHome()">← 選擇類型</button>`;
+  }
+  // second-to-last = AI review step; last content step = review step index
+  const isReviewStep = (step === lastContentStep - 1);
+  const isBeforeReview = (step === lastContentStep - 2);
+  let label, cls;
+  if (isReviewStep) {
+    // On review step, nav is handled by review UI buttons; hide next
+    return wrap;
+  } else if (isBeforeReview) {
+    label = '下一步 → AI 審核';
+    cls = 'btn-next';
+  } else {
+    label = '下一步 →';
+    cls = 'btn-next';
+  }
+  wrap.innerHTML += `<button class="${cls}" onclick="nextStep()">${label}</button>`;
+  return wrap;
+}
+
+// ── SOP Steps ──────────────────────────────────────────────
+function renderSopStep(step) {
+  switch(step) {
+    case 0: return renderSopStep0();
+    case 1: return renderSopStep1();
+    case 2: return renderSopStep2();
+    case 3: return renderSopStep3();
+    case 4: return renderSopStep4();
+    case 5: return renderSopStep5();
+    case 6: return renderSopStep6();
+    case 7: return renderAiReviewStep();
+    default: return '';
+  }
+}
+
+function renderSopStep0() {
+  const d = sopData.step0 || {};
+  return `
+    <div class="card-title">① 基本資訊</div>
+    <div class="card-subtitle">填寫 SOP 的核心識別資訊</div>
+    <div class="form-group">
+      <label class="form-label">SOP 標題 <span class="req">*</span></label>
+      <input class="form-input" id="s0_title" placeholder="例：員工報帳申請流程" value="${esc(d.title||'')}">
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">部門名稱 <span class="hint">（選填）</span></label>
+        <input class="form-input" id="s0_dept" placeholder="例：財務部" value="${esc(d.dept||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">預計耗時 <span class="hint">（選填）</span></label>
+        <input class="form-input" id="s0_duration" placeholder="例：15 分鐘" value="${esc(d.duration||'')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">一句話核心總結 <span class="req">*</span></label>
+      <input class="form-input" id="s0_summary" placeholder="例：說明員工如何提交費用報帳申請並取得核准" value="${esc(d.summary||'')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">重要程度</label>
+      <div class="radio-group" id="rg_importance">
+        ${['一般','重要','緊急'].map(v => `<label class="radio-label${(d.importance||'一般')===v?' selected':''}" data-rg="importance" data-v="${v}"><input type="radio" name="importance" value="${v}" ${(d.importance||'一般')===v?'checked':''}>${v}</label>`).join('')}
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:16px">
+      <label class="form-label">排除標籤 <span class="hint">（防 AI 混淆的關鍵欄位）</span></label>
+      <input class="form-input" id="s0_exclusionTags" placeholder="與本流程容易混淆但不適用的主題，逗號分隔。例：貸款,信用卡,外匯" value="${esc(d.exclusionTags||'')}">
+      <div style="font-size:12px;color:#888;margin-top:4px">⚠️ 建議填寫，可顯著減少 AI 在相似流程間的誤判</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">相似文件名稱 <span class="hint">（選填）</span></label>
+      <input class="form-input" id="s0_similarDocs" placeholder="功能相似但情境不同的其他文件名稱，逗號分隔。例：貸款請款流程" value="${esc(d.similarDocs||'')}">
+    </div>`;
+}
+
+function renderSopStep1() {
+  const d = sopData.step1 || {};
+  return `
+    <div class="card-title">② 適用對象</div>
+    <div class="card-subtitle">明確定義這份 SOP 的使用範圍</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">適用對象 <span class="hint">（哪些人）</span></label>
+        <textarea class="form-textarea" id="s1_who" placeholder="例：所有全職員工">${esc(d.who||'')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">不適用對象</label>
+        <textarea class="form-textarea" id="s1_nowho" placeholder="例：實習生、外包廠商">${esc(d.nowho||'')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">適用情境 <span class="hint">（什麼時候）</span></label>
+        <textarea class="form-textarea" id="s1_when" placeholder="例：每月底前提交當月費用">${esc(d.when||'')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">不適用情境</label>
+        <textarea class="form-textarea" id="s1_nowhen" placeholder="例：超過 3 個月的費用不受理">${esc(d.nowhen||'')}</textarea>
+      </div>
+    </div>`;
+}
+
+function renderSopStep2() {
+  const d = sopData.step2 || {};
+  const imgs = d.images || [];
+  return `
+    <div class="card-title">③ 前置準備</div>
+    <div class="card-subtitle">執行前需要備妥的資源</div>
+    <div class="form-group">
+      <label class="form-label">需要的系統權限 <span class="hint">（選填）</span></label>
+      <textarea class="form-textarea" id="s2_perm" placeholder="例：需要 ERP 系統的費用申請模組權限">${esc(d.perm||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">硬體 / 工具 <span class="hint">（選填）</span></label>
+      <textarea class="form-textarea" id="s2_tools" placeholder="例：借用登記表、識別證">${esc(d.tools||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">必要資料 / 文件 <span class="hint">（選填）</span></label>
+      <textarea class="form-textarea" id="s2_docs" placeholder="例：費用明細、主管口頭核准">${esc(d.docs||'')}</textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:0;border-top:1px solid #e2e8f0;padding-top:14px;">
+      <label class="form-label" style="margin-bottom:10px;display:block;">📸 前置準備示意圖 <span class="hint">（選填，可附畫面截圖、表單樣本等）</span></label>
+      ${renderSectionImgSection('s2', imgs)}
+    </div>`;
+}
+
+function renderSopStep3() {
+  const d = sopData.step3 || {};
+  const steps = (d.steps && d.steps.length) ? d.steps : [{}];
+  return `
+    <div class="card-title">④ 標準步驟</div>
+    <div class="card-subtitle">依序列出每個執行步驟</div>
+    <div class="dynamic-section">
+      <div class="dynamic-cards" id="stepsContainer">
+        ${steps.map((s, i) => renderStepCard(s, i)).join('')}
+      </div>
+      <button class="add-btn" style="margin-top:12px" onclick="addStepCard()">＋ 新增步驟</button>
+    </div>`;
+}
+
+function renderStepCard(s, i) {
+  return `<div class="dynamic-card" id="stepCard_${i}">
+    <div class="dynamic-card-header">
+      <span class="dynamic-card-title">步驟 ${i + 1}</span>
+      ${i > 0 ? `<button class="remove-btn" onclick="removeStepCard(${i})">✕</button>` : ''}
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">步驟名稱</label>
+        <input class="form-input step-name" placeholder="例：填寫費用申請單" value="${esc(s.name||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">執行人</label>
+        <input class="form-input step-who" placeholder="例：申請人" value="${esc(s.who||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">操作位置 / 系統</label>
+        <input class="form-input step-where" placeholder="例：ERP → 費用申請" value="${esc(s.where||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">完成指標</label>
+        <input class="form-input step-done" placeholder="例：系統顯示「申請已送出」" value="${esc(s.done||'')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">具體動作說明</label>
+      <textarea class="form-textarea step-action" placeholder="例：點選「新增申請」，填入日期、金額、類別、說明">${esc(s.action||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">注意事項 <span class="hint">（選填）</span></label>
+      <input class="form-input step-note" placeholder="例：金額需與收據完全一致" value="${esc(s.note||'')}">
+    </div>
+    <div class="form-group" style="margin-bottom:0;border-top:1px dashed #e2e8f0;padding-top:12px;">
+      <label class="form-label" style="margin-bottom:8px;display:block;">📸 步驟示意圖 <span class="hint">（選填）</span></label>
+      ${renderSectionImgSection('step_' + i, s.images || [])}
+    </div>
+  </div>`;
+}
+
+function renderSopStep4() {
+  const d = sopData.step4 || {};
+  const cases = (d.cases && d.cases.length) ? d.cases : [{}];
+  return `
+    <div class="card-title">⑤ 異常處理</div>
+    <div class="card-subtitle">列出可能遇到的問題及解決方式</div>
+    <div class="dynamic-section">
+      <div class="dynamic-cards" id="casesContainer">
+        ${cases.map((c, i) => renderCaseCard(c, i)).join('')}
+      </div>
+      <button class="add-btn" style="margin-top:12px" onclick="addCaseCard()">＋ 新增異常狀況</button>
+    </div>`;
+}
+
+function renderCaseCard(c, i) {
+  return `<div class="dynamic-card" id="caseCard_${i}">
+    <div class="dynamic-card-header">
+      <span class="dynamic-card-title">異常狀況 ${i + 1}</span>
+      ${i > 0 ? `<button class="remove-btn" onclick="removeCaseCard(${i})">✕</button>` : ''}
+    </div>
+    <div class="form-group">
+      <label class="form-label">狀況描述</label>
+      <input class="form-input case-problem" placeholder="例：系統顯示「金額超出上限」" value="${esc(c.problem||'')}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">解決方法</label>
+      <textarea class="form-textarea case-solution" placeholder="例：申請金額超過 NT$ 5,000 需主管在實體表單上簽核後另行提交">${esc(c.solution||'')}</textarea>
+    </div>
+  </div>`;
+}
+
+function renderSopStep5() {
+  const d = sopData.step5 || {};
+  const faqs = (d.faqs && d.faqs.length) ? d.faqs : [{ q: '', a: '' }];
+  return `
+    <div class="card-title">⑥ 常見問題 FAQ</div>
+    <div class="card-subtitle">建議至少 8 題，涵蓋不同角度的問題</div>
+    <div class="ai-bar">
+      <button class="ai-btn" id="aiFaqBtn" onclick="generateFaq()">🤖 AI 幫我想問題</button>
+      <span class="ai-bar-note">AI 會根據前面填寫的內容自動生成問題（由 Mac Mini 本地模型處理）</span>
+    </div>
+    <div class="dynamic-section">
+      <div class="dynamic-cards" id="faqContainer">
+        ${faqs.map((f, i) => renderFaqItem(f, i)).join('')}
+      </div>
+      <button class="add-btn" style="margin-top:12px" onclick="addFaqItem()">＋ 新增問題</button>
+    </div>`;
+}
+
+function renderFaqItem(f, i) {
+  return `<div class="faq-item" id="faqItem_${i}">
+    <div class="faq-item-header">
+      <span class="faq-q-label">Q${i + 1}</span>
+      ${i > 0 ? `<button class="remove-btn" onclick="removeFaqItem(${i})">✕</button>` : ''}
+    </div>
+    <input class="form-input faq-q" placeholder="問題..." value="${esc(f.q||'')}">
+    <textarea class="form-textarea faq-a" placeholder="答案..." style="min-height:60px">${esc(f.a||'')}</textarea>
+  </div>`;
+}
+
+function renderSopStep6() {
+  const d = sopData.step6 || {};
+  return `
+    <div class="card-title">⑦ 維護資訊</div>
+    <div class="card-subtitle">填寫文件管理相關資訊</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">最後更新日期</label>
+        <input class="form-input" type="date" id="s6_date" value="${esc(d.date||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">文件負責人</label>
+        <input class="form-input" id="s6_owner" placeholder="例：財務組 / 王小明" value="${esc(d.owner||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">職務代理人</label>
+        <input class="form-input" id="s6_deputy" placeholder="例：陳大華" value="${esc(d.deputy||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">相關附件 / 連結 <span class="hint">（選填）</span></label>
+        <input class="form-input" id="s6_link" placeholder="例：https://..." value="${esc(d.link||'')}">
+      </div>
+    </div>`;
+}
+
+// ── Ref Steps ──────────────────────────────────────────────
+function renderRefStep(step) {
+  switch(step) {
+    case 0: return renderRefStep0();
+    case 1: return renderRefStep1();
+    case 2: return renderRefStep2();
+    case 3: return renderAiReviewStep();
+    default: return '';
+  }
+}
+
+function renderRefStep0() {
+  const d = refData.step0 || {};
+  return `
+    <div class="card-title">① 基本資訊</div>
+    <div class="card-subtitle">填寫這份資訊參考文件的識別資訊</div>
+    <div class="form-group">
+      <label class="form-label">文件標題 <span class="req">*</span></label>
+      <input class="form-input" id="r0_title" placeholder="例：會議室要怎麼借" value="${esc(d.title||'')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">一句話說明 <span class="req">*</span></label>
+      <input class="form-input" id="r0_summary" placeholder="例：說明會議室借用方式與注意事項" value="${esc(d.summary||'')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">適用對象 <span class="hint">（選填）</span></label>
+      <input class="form-input" id="r0_who" placeholder="例：財務部全體同仁" value="${esc(d.who||'')}">
+    </div>`;
+}
+
+const REF_CATS = ['去哪找', '怎麼取得', '注意事項', '相關連結', '其他'];
+
+function renderRefStep1() {
+  const d = refData.step1 || {};
+  const items = (d.items && d.items.length) ? d.items : [{}];
+  return `
+    <div class="card-title">② 資訊內容</div>
+    <div class="card-subtitle">依類別整理各項資訊，可新增多條</div>
+    <div class="dynamic-section">
+      <div class="dynamic-cards" id="refItemsContainer">
+        ${items.map((item, i) => renderRefItem(item, i)).join('')}
+      </div>
+      <button class="add-btn" style="margin-top:12px" onclick="addRefItem()">＋ 新增資訊條目</button>
+    </div>`;
+}
+
+function renderRefItem(item, i) {
+  const catOpts = REF_CATS.map(c => `<option value="${c}" ${(item.cat||'去哪找')===c?'selected':''}>${c}</option>`).join('');
+  return `<div class="dynamic-card" id="refItem_${i}">
+    <div class="dynamic-card-header">
+      <span class="dynamic-card-title">條目 ${i + 1}</span>
+      ${i > 0 ? `<button class="remove-btn" onclick="removeRefItem(${i})">✕</button>` : ''}
+    </div>
+    <div class="form-group">
+      <label class="form-label">類別</label>
+      <select class="form-select cat-select ref-item-cat">${catOpts}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">說明</label>
+      <textarea class="form-textarea ref-item-desc" placeholder="詳細說明...">${esc(item.desc||'')}</textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">連結 <span class="hint">（選填）</span></label>
+      <input class="form-input ref-item-url" placeholder="https://..." value="${esc(item.url||'')}">
+    </div>
+  </div>`;
+}
+
+function renderRefStep2() {
+  const d = refData.step2 || {};
+  const faqs = (d.faqs && d.faqs.length) ? d.faqs : [{ q: '', a: '' }];
+  const imgs = refData.images || [];
+  return `
+    <div class="card-title">③ 常見問題 FAQ</div>
+    <div class="card-subtitle">建議 4-6 題</div>
+    <div class="ai-bar">
+      <button class="ai-btn" id="aiFaqBtn" onclick="generateFaq()">🤖 AI 幫我想問題</button>
+      <span class="ai-bar-note">AI 會根據前面填寫的內容自動生成問題（由 Mac Mini 本地模型處理）</span>
+    </div>
+    <div class="dynamic-section">
+      <div class="dynamic-cards" id="faqContainer">
+        ${faqs.map((f, i) => renderFaqItem(f, i)).join('')}
+      </div>
+      <button class="add-btn" style="margin-top:12px" onclick="addFaqItem()">＋ 新增問題</button>
+    </div>
+    <div style="margin-top:24px;border-top:1px solid #e2e8f0;padding-top:18px;">
+      <label class="form-label" style="margin-bottom:10px;display:block;">📸 參考圖片 <span class="hint">（選填，可附多張截圖、表單樣本、參考資料等）</span></label>
+      ${renderSectionImgSection('ref_main', imgs)}
+    </div>`;
+}
+
+// ── AI Review Step ─────────────────────────────────────────
+let reviewResult = null; // null | { issues: [{level,field,msg}], passed: bool }
+
+function renderAiReviewStep() {
+  let issuesHtml = '';
+  if (reviewResult?.error) {
+    issuesHtml = `<div class="review-issue review-error">
+      <span class="review-badge">❌ 審核失敗</span>
+      <span class="review-msg">${esc(reviewResult.errorMsg || '未知錯誤')}<br><span style="color:#7c2d12;font-size:12px;">可以點下方「重試」再試一次，或直接略過審核產生文件。</span></span>
+    </div>`;
+  } else if (reviewResult !== null) {
+    issuesHtml = reviewResult.issues.length === 0
+      ? `<div class="review-pass">✅ 文件品質良好，AI 沒有發現明顯問題！</div>`
+      : reviewResult.issues.map(iss => `
+          <div class="review-issue review-${iss.level}">
+            <span class="review-badge">${iss.level === 'error' ? '❌ 必修' : '⚠️ 建議'}</span>
+            <span class="review-field">${esc(iss.field || '')}</span>
+            <span class="review-msg">${esc(iss.msg || '')}</span>
+          </div>`).join('');
+  }
+
+  let btnArea;
+  if (reviewResult === null) {
+    btnArea = `<button class="btn-primary" onclick="runAiReview()" id="reviewRunBtn">🤖 開始 AI 審核</button>
+       <button class="btn-skip" onclick="skipReview()">略過審核，直接生成</button>`;
+  } else if (reviewResult.error) {
+    btnArea = `<button class="btn-primary" onclick="reviewResult=null;render();">🔄 重試審核</button>
+       <button class="btn-skip" onclick="skipReview()">略過審核，直接生成</button>`;
+  } else if (reviewResult.issues.filter(i => i.level === 'error').length > 0) {
+    btnArea = `<button class="btn-prev" onclick="prevStep()">← 回去修改</button>
+       <button class="btn-skip" onclick="skipReview()">忽略問題，直接生成</button>`;
+  } else {
+    btnArea = `<button class="btn-prev" onclick="prevStep()">← 回去修改</button>
+       <button class="btn-primary" onclick="skipReview()">生成文件 ✨</button>`;
+  }
+
+  return `
+    <div class="card-title">🔍 AI 審核</div>
+    <div class="card-subtitle">AI 會檢查文件內容是否完整、清晰，確保其他人或 AI Agent 都能正確理解</div>
+    <div id="reviewLoading" style="display:none;text-align:center;padding:32px 0;">
+      <div class="spinner" style="width:28px;height:28px;margin:0 auto 12px;"></div>
+      <div style="color:#64748b;font-size:14px;">AI 正在審核文件...</div>
+    </div>
+    <div id="reviewResults" style="margin:20px 0;">${issuesHtml}</div>
+    <div class="review-actions">${btnArea}</div>`;
+}
+
+async function runAiReview() {
+  const btn = document.getElementById('reviewRunBtn');
+  if (btn) btn.disabled = true;
+  document.getElementById('reviewLoading').style.display = 'block';
+  document.getElementById('reviewResults').innerHTML = '';
+
+  try {
+    collectCurrentStep();
+    const content = buildReviewContext();
+
+    const sysMsg = `你是一個 SOP 文件品質審核員。請分析文件內容，找出可能讓 AI Agent 無法正確執行的問題。
+輸出純 JSON 陣列，每個問題包含：
+- level: "error"（必修，會造成 Agent 失敗）或 "warning"（建議改善）
+- field: 問題所在的欄位名稱（例：步驟2、異常處理、FAQ）
+- msg: 具體說明問題（繁體中文，一句話）
+
+⚠️ 務必「只輸出 JSON 陣列本身」：以 [ 開頭、以 ] 結尾，不要有任何前後說明文字、不要用 \`\`\` 程式碼框。若無問題，輸出空陣列 []。
+常見問題類型：
+- 步驟未指定系統名稱或操作路徑
+- 步驟未說明成功判斷標準
+- 使用模糊詞：盡快、通常、相關人員、適當
+- 異常處理只寫「聯絡主管」沒有具體說明
+- FAQ 答案為空或過於簡短`;
+
+    const userMsg = `請審核以下文件內容：\n\n${content}`;
+
+    // 解析失敗自動重試一次（本機模型偶爾吐非純 JSON）
+    let issues = null, lastErr = null;
+    for (let attempt = 0; attempt < 2 && issues === null; attempt++) {
+      try {
+        const raw = await callLocalLLM(sysMsg, userMsg);
+        const match = raw.match(/\[[\s\S]*\]/);
+        if (!match) throw new Error('回應中找不到 JSON 陣列');
+        issues = JSON.parse(match[0]);
+      } catch (e) { lastErr = e; }
+    }
+    if (issues === null) throw lastErr || new Error('無法解析回應');
+    reviewResult = { issues, passed: issues.filter(i => i.level === 'error').length === 0 };
+  } catch(e) {
+    reviewResult = { error: true, errorMsg: e.message || String(e), issues: [], passed: false };
+  }
+
+  document.getElementById('reviewLoading').style.display = 'none';
+  const card = document.querySelector('.card');
+  if (card) card.innerHTML = renderAiReviewStep();
+}
+
+function buildReviewContext() {
+  if (docType === 'sop') {
+    const s0 = sopData.step0 || {}, s1 = sopData.step1 || {}, s2 = sopData.step2 || {};
+    const s3 = sopData.step3 || {}, s4 = sopData.step4 || {}, s5 = sopData.step5 || {};
+    const parts = [
+      `【標題】${s0.title || '（未填）'}`,
+      `【核心總結】${s0.summary || '（未填）'}`,
+      `【適用對象】${s1.who || '（未填）'}`,
+      `【前置準備】系統權限：${s2.perm || '無'}；工具：${s2.tools || '無'}；資料：${s2.docs || '無'}`,
+    ];
+    if (s3.steps?.length) {
+      s3.steps.forEach((st, i) => {
+        parts.push(`【步驟${i+1}：${st.name}】執行人：${st.who || '未填'}；位置：${st.where || '未填'}；動作：${st.action || '未填'}；完成指標：${st.done || '未填'}；注意：${st.note || '無'}`);
+      });
+    } else { parts.push('【步驟】（未填）'); }
+    if (s4.cases?.length) {
+      s4.cases.forEach((c, i) => parts.push(`【異常${i+1}】狀況：${c.problem || '未填'}；解法：${c.solution || '未填'}`));
+    } else { parts.push('【異常處理】（未填）'); }
+    if (s5.faqs?.length) {
+      s5.faqs.forEach((f, i) => parts.push(`【FAQ${i+1}】Q：${f.q || '未填'} / A：${f.a || '未填'}`));
+    }
+    return parts.join('\n');
+  } else {
+    const r0 = refData.step0 || {}, r1 = refData.step1 || {}, r2 = refData.step2 || {};
+    const parts = [
+      `【標題】${r0.title || '（未填）'}`,
+      `【說明】${r0.summary || '（未填）'}`,
+    ];
+    (r1.items || []).forEach((it, i) => parts.push(`【資訊${i+1}】類別：${it.cat}；說明：${it.desc || '未填'}；連結：${it.url || '無'}`));
+    (r2.faqs || []).forEach((f, i) => parts.push(`【FAQ${i+1}】Q：${f.q || '未填'} / A：${f.a || '未填'}`));
+    return parts.join('\n');
+  }
+}
+
+function skipReview() {
+  reviewResult = null;
+  currentStep++;
+  render();
+  window.scrollTo(0, 0);
+}
+
+// ── Complete page ──────────────────────────────────────────
+function renderComplete() {
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  let title;
+  if (docType === 'ai') {
+    const h1 = (aiData.generatedMd || '').match(/^#\s+(.+)$/m);
+    title = (h1 && h1[1].trim()) || aiData.topic.slice(0, 40) || 'AI文件';
+  } else if (docType === 'sop') {
+    title = sopData.step0?.title || 'SOP文件';
+  } else {
+    title = refData.step0?.title || '資訊參考';
+  }
+  const safeTitle = title
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\u4e00-\u9fff\-（）()]/g, '')
+    .slice(0, 80);
+  const mdContent = generateMd();
+
+  wrap.innerHTML = `
+    <div class="complete-page">
+      <div class="complete-icon">✅</div>
+      <h2>文件已準備好！</h2>
+      <p>請為檔案命名，然後下載或送出待審（由審核者核可後上架）</p>
+      <div class="filename-row">
+        <input id="filenameInput" value="${esc(safeTitle)}" placeholder="檔案名稱" maxlength="80" oninput="this.value=this.value.replace(/[\\\\/:*?&quot;&lt;&gt;|]/g,'')">
+        <span class="filename-ext">.md</span>
+      </div>
+      <div class="md-preview-wrap">
+        <div class="md-preview-toggle" onclick="togglePreview()">
+          <span>📄 預覽 .md 內容</span>
+          <span id="previewArrow">▶</span>
+        </div>
+        <pre class="md-preview-content" id="mdPreview">${esc(mdContent)}</pre>
+      </div>
+      <div class="action-btns">
+        <button class="btn-download" onclick="downloadMd()">⬇️ 下載 .md</button>
+        <button class="btn-upload" id="uploadBtn" onclick="uploadToDrive()">📤 送出待審</button>
+        <button class="btn-restart" onclick="restartAll()">🔄 建立新文件</button>
+      </div>
+      <div class="upload-msg" id="uploadMsg"></div>
+    </div>`;
+  return wrap;
+}
+
+function togglePreview() {
+  const el = document.getElementById('mdPreview');
+  const arrow = document.getElementById('previewArrow');
+  el.classList.toggle('open');
+  arrow.textContent = el.classList.contains('open') ? '▼' : '▶';
+}
+
+// ── Collect step data ──────────────────────────────────────
+function collectCurrentStep() {
+  if (docType === 'sop') {
+    switch(currentStep) {
+      case 0:
+        sopData.step0 = {
+          title: v('s0_title'), dept: v('s0_dept'),
+          duration: v('s0_duration'), summary: v('s0_summary'),
+          importance: collectRadio('importance') || '一般',
+          exclusionTags: v('s0_exclusionTags'), similarDocs: v('s0_similarDocs')
+        }; break;
+      case 1:
+        sopData.step1 = { who: v('s1_who'), nowho: v('s1_nowho'), when: v('s1_when'), nowhen: v('s1_nowhen') }; break;
+      case 2: {
+        const existingImgs = sopData.step2?.images || [];
+        sopData.step2 = { perm: v('s2_perm'), tools: v('s2_tools'), docs: v('s2_docs'), images: _sectionImages['s2'] || existingImgs };
+        break;
+      }
+      case 3: {
+        const newSteps = collectStepCards();
+        // 把每個步驟對應的 images 從 in-memory cache 同步進去
+        newSteps.forEach((s, i) => {
+          const key = `step_${i}`;
+          if (_sectionImages[key]) s.images = _sectionImages[key];
+          else if (sopData.step3?.steps?.[i]?.images) s.images = sopData.step3.steps[i].images;
+        });
+        sopData.step3 = { steps: newSteps };
+        break;
+      }
+      case 4:
+        sopData.step4 = { cases: collectCaseCards() }; break;
+      case 5:
+        sopData.step5 = { faqs: collectFaqs() }; break;
+      case 6:
+        sopData.step6 = { date: v('s6_date'), owner: v('s6_owner'), deputy: v('s6_deputy'), link: v('s6_link') }; break;
+    }
+  } else {
+    switch(currentStep) {
+      case 0:
+        refData.step0 = { title: v('r0_title'), summary: v('r0_summary'), who: v('r0_who') }; break;
+      case 1:
+        refData.step1 = { items: collectRefItems() }; break;
+      case 2:
+        refData.step2 = { faqs: collectFaqs() }; break;
+    }
+  }
+}
+
+// ── Section Image Management（每個段落各自管理圖片）──────────────
+// sectionKey 範例：'s2'（前置準備）、'step_0'、'step_1'... 、'ref_main'、'ai_main'
+const _sectionImages = {};
+
+function _getSectionStore(sectionKey) {
+  // 先從 in-memory 取，沒有的話從 sopData/refData/aiData 還原
+  if (_sectionImages[sectionKey]) return _sectionImages[sectionKey];
+  let stored = [];
+  if (sectionKey === 's2') stored = sopData.step2?.images || [];
+  else if (sectionKey.startsWith('step_')) {
+    const idx = parseInt(sectionKey.slice(5));
+    stored = sopData.step3?.steps?.[idx]?.images || [];
+  } else if (sectionKey === 'ref_main') stored = refData.images || [];
+  else if (sectionKey === 'ai_main')  stored = aiData.images || [];
+  _sectionImages[sectionKey] = [...stored];
+  return _sectionImages[sectionKey];
+}
+
+function _syncSectionToData(sectionKey) {
+  const store = _sectionImages[sectionKey] || [];
+  if (sectionKey === 's2') {
+    if (!sopData.step2) sopData.step2 = {};
+    sopData.step2.images = store;
+  } else if (sectionKey.startsWith('step_')) {
+    const idx = parseInt(sectionKey.slice(5));
+    if (!sopData.step3) sopData.step3 = { steps: [] };
+    if (!sopData.step3.steps[idx]) sopData.step3.steps[idx] = {};
+    sopData.step3.steps[idx].images = store;
+  } else if (sectionKey === 'ref_main') refData.images = store;
+  else if (sectionKey === 'ai_main')   aiData.images   = store;
+}
+
+function renderSectionImgSection(sectionKey, images) {
+  const imgs = images || _getSectionStore(sectionKey);
+  const safeKey = sectionKey.replace(/[^a-z0-9_]/gi, '_');
+  return `
+    <div class="step-img-area">
+      <div class="step-img-tabs">
+        <button type="button" class="step-img-tab active" onclick="switchSectionImgTab('${safeKey}','upload')">📁 上傳圖片</button>
+        <button type="button" class="step-img-tab" onclick="switchSectionImgTab('${safeKey}','url')">🔗 貼上網址</button>
+      </div>
+      <div id="secImgUpload_${safeKey}">
+        <input type="file" accept="image/*" multiple style="font-size:12px;color:#64748b;" onchange="handleSectionImgUpload('${safeKey}',this)">
+        <div style="font-size:11px;color:#9ca3af;margin-top:4px;">支援 JPG、PNG、GIF，圖片會內嵌於文件中</div>
+      </div>
+      <div id="secImgUrl_${safeKey}" style="display:none;">
+        <div style="display:flex;gap:6px;">
+          <input id="secImgUrlInput_${safeKey}" class="form-input" placeholder="貼上圖片網址（https://...）" style="font-size:12px;">
+          <input id="secImgAltInput_${safeKey}" class="form-input" placeholder="圖片說明（選填）" style="font-size:12px;max-width:140px;">
+          <button type="button" onclick="addSectionImgUrl('${safeKey}')" style="padding:6px 14px;border:none;border-radius:8px;background:#4f8ef7;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">新增</button>
+        </div>
+      </div>
+      <div class="step-img-previews" id="secImgList_${safeKey}">
+        ${imgs.map((img, j) => `
+          <div class="step-img-item" id="secImgItem_${safeKey}_${j}">
+            <img src="${esc(img.url)}" title="${esc(img.alt||'')}" onclick="window.open('${esc(img.url)}','_blank')">
+            <button class="step-img-del" onclick="removeSectionImg('${safeKey}',${j})">✕</button>
+            <div class="step-img-caption">${esc(img.alt||'圖片')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function switchSectionImgTab(sectionKey, tab) {
+  document.getElementById(`secImgUpload_${sectionKey}`).style.display = tab === 'upload' ? '' : 'none';
+  document.getElementById(`secImgUrl_${sectionKey}`).style.display    = tab === 'url'    ? '' : 'none';
+  const area = document.getElementById(`secImgUpload_${sectionKey}`).closest('.step-img-area');
+  area.querySelectorAll('.step-img-tab').forEach((btn, idx) => {
+    btn.classList.toggle('active', (tab === 'upload' && idx === 0) || (tab === 'url' && idx === 1));
+  });
+}
+
+async function handleSectionImgUpload(sectionKey, input) {
+  for (const file of input.files) {
+    const url = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.readAsDataURL(file);
+    });
+    _addSectionImg(sectionKey, { url, alt: file.name.replace(/\.[^.]+$/, '') });
+  }
+  input.value = '';
+}
+
+function addSectionImgUrl(sectionKey) {
+  const url = document.getElementById(`secImgUrlInput_${sectionKey}`).value.trim();
+  const alt = document.getElementById(`secImgAltInput_${sectionKey}`).value.trim();
+  if (!url) return;
+  _addSectionImg(sectionKey, { url, alt: alt || '示意圖' });
+  document.getElementById(`secImgUrlInput_${sectionKey}`).value = '';
+  document.getElementById(`secImgAltInput_${sectionKey}`).value = '';
+}
+
+function _addSectionImg(sectionKey, img) {
+  const store = _getSectionStore(sectionKey);
+  store.push(img);
+  _syncSectionToData(sectionKey);
+  const j = store.length - 1;
+  const list = document.getElementById(`secImgList_${sectionKey}`);
+  if (!list) return;
+  const item = document.createElement('div');
+  item.className = 'step-img-item';
+  item.id = `secImgItem_${sectionKey}_${j}`;
+  item.innerHTML = `<img src="${img.url}" title="${esc(img.alt)}" style="cursor:pointer;" onclick="window.open(this.src,'_blank')">
+    <button class="step-img-del" onclick="removeSectionImg('${sectionKey}',${j})">✕</button>
+    <div class="step-img-caption">${esc(img.alt)}</div>`;
+  list.appendChild(item);
+  saveDraft();
+}
+
+function removeSectionImg(sectionKey, idx) {
+  const store = _getSectionStore(sectionKey);
+  store.splice(idx, 1);
+  _syncSectionToData(sectionKey);
+  document.getElementById(`secImgItem_${sectionKey}_${idx}`)?.remove();
+  // Re-number remaining items
+  document.querySelectorAll(`#secImgList_${sectionKey} .step-img-item`).forEach((item, newIdx) => {
+    item.id = `secImgItem_${sectionKey}_${newIdx}`;
+    const btn = item.querySelector('.step-img-del');
+    if (btn) btn.setAttribute('onclick', `removeSectionImg('${sectionKey}',${newIdx})`);
+  });
+  saveDraft();
+}
+
+// 切換 step 時清空對應的 in-memory cache（避免步驟順序變化造成圖片錯位）
+function _clearSectionCache() {
+  Object.keys(_sectionImages).forEach(k => delete _sectionImages[k]);
+}
+
+function collectStepCards() {
+  return Array.from(document.querySelectorAll('#stepsContainer .dynamic-card')).map(card => ({
+    name: card.querySelector('.step-name')?.value.trim() || '',
+    who: card.querySelector('.step-who')?.value.trim() || '',
+    where: card.querySelector('.step-where')?.value.trim() || '',
+    action: card.querySelector('.step-action')?.value.trim() || '',
+    done: card.querySelector('.step-done')?.value.trim() || '',
+    note: card.querySelector('.step-note')?.value.trim() || ''
+  }));
+}
+
+function collectCaseCards() {
+  return Array.from(document.querySelectorAll('#casesContainer .dynamic-card')).map(card => ({
+    problem: card.querySelector('.case-problem')?.value.trim() || '',
+    solution: card.querySelector('.case-solution')?.value.trim() || ''
+  }));
+}
+
+function collectFaqs() {
+  return Array.from(document.querySelectorAll('#faqContainer .faq-item')).map(item => ({
+    q: item.querySelector('.faq-q')?.value.trim() || '',
+    a: item.querySelector('.faq-a')?.value.trim() || ''
+  }));
+}
+
+function collectRefItems() {
+  return Array.from(document.querySelectorAll('#refItemsContainer .dynamic-card')).map(card => ({
+    cat: card.querySelector('.ref-item-cat')?.value || '去哪找',
+    desc: card.querySelector('.ref-item-desc')?.value.trim() || '',
+    url: card.querySelector('.ref-item-url')?.value.trim() || ''
+  }));
+}
+
+// ── Validate ───────────────────────────────────────────────
+function validateCurrentStep() {
+  if (docType === 'sop') {
+    if (currentStep === 0) {
+      if (!v('s0_title')) { toast('⚠ 請填寫 SOP 標題'); return false; }
+      if (!v('s0_summary')) { toast('⚠ 請填寫一句話核心總結'); return false; }
+    }
+    if (currentStep === 3) {
+      const steps = collectStepCards();
+      const filled = steps.filter(s => s.name && s.action).length;
+      if (filled === 0) {
+        return confirm('⚠ 標準步驟還沒有填寫任何內容，這份 SOP 將沒有具體步驟。確定繼續？');
+      }
+      if (filled < steps.length) {
+        const incomplete = steps.length - filled;
+        if (!confirm(`⚠ 有 ${incomplete} 個步驟缺少名稱或具體動作。確定繼續？`)) return false;
+      }
+    }
+    if (currentStep === 4) {
+      const cases = collectCaseCards();
+      const filled = cases.filter(c => c.problem).length;
+      if (cases.length > 0 && filled === 0) {
+        // Cards exist but all empty - just warn
+        if (!confirm('⚠ 異常處理欄位都沒填，將顯示為「暫無已知異常狀況」。確定繼續？')) return false;
+      }
+    }
+    if (currentStep === 5) {
+      const faqs = collectFaqs();
+      const filled = faqs.filter(f => f.q).length;
+      if (filled < 8) {
+        return confirm(`建議至少 8 題 FAQ，目前只有 ${filled} 題。確定繼續？`);
+      }
+    }
+  } else {
+    if (currentStep === 0) {
+      if (!v('r0_title')) { toast('⚠ 請填寫文件標題'); return false; }
+      if (!v('r0_summary')) { toast('⚠ 請填寫一句話說明'); return false; }
+    }
+    if (currentStep === 1) {
+      const items = collectRefItems();
+      const filled = items.filter(it => it.desc).length;
+      if (filled === 0) {
+        return confirm('⚠ 還沒填寫任何資訊內容。確定繼續？');
+      }
+    }
+    if (currentStep === 2) {
+      const faqs = collectFaqs();
+      const filled = faqs.filter(f => f.q).length;
+      if (filled < 4) {
+        return confirm(`建議至少 4 題 FAQ，目前只有 ${filled} 題。確定繼續？`);
+      }
+    }
+  }
+  return true;
+}
+
+// ── Navigation ─────────────────────────────────────────────
+function nextStep() {
+  if (!validateCurrentStep()) return;
+  collectCurrentStep();
+  saveDraft();
+  currentStep++;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function prevStep() {
+  collectCurrentStep();
+  saveDraft();
+  reviewResult = null; // reset review when going back
+  currentStep--;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function goHome() {
+  collectCurrentStep();
+  saveDraft();
+  docType = null;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function restartAll() {
+  docType = null;
+  currentStep = 0;
+  sopData = {};
+  refData = {};
+  localStorage.removeItem(DRAFT_KEY);
+  render();
+  window.scrollTo(0, 0);
+}
+
+// ── Restore step data ──────────────────────────────────────
+function restoreStep() {
+  if (docType === 'sop') {
+    switch(currentStep) {
+      case 0: {
+        const d = sopData.step0 || {};
+        sv('s0_title', d.title); sv('s0_dept', d.dept);
+        sv('s0_duration', d.duration); sv('s0_summary', d.summary);
+        break;
+      }
+      case 1: {
+        const d = sopData.step1 || {};
+        sv('s1_who', d.who); sv('s1_nowho', d.nowho);
+        sv('s1_when', d.when); sv('s1_nowhen', d.nowhen);
+        break;
+      }
+      case 2: {
+        const d = sopData.step2 || {};
+        sv('s2_perm', d.perm); sv('s2_tools', d.tools); sv('s2_docs', d.docs);
+        break;
+      }
+      case 6: {
+        const d = sopData.step6 || {};
+        sv('s6_date', d.date); sv('s6_owner', d.owner);
+        sv('s6_deputy', d.deputy); sv('s6_link', d.link);
+        break;
+      }
+    }
+  } else {
+    if (currentStep === 0) {
+      const d = refData.step0 || {};
+      sv('r0_title', d.title); sv('r0_summary', d.summary); sv('r0_who', d.who);
+    }
+  }
+}
+
+// ── Dynamic card handlers ──────────────────────────────────
+function addStepCard() {
+  collectCurrentStep();
+  const steps = sopData.step3?.steps || [];
+  steps.push({});
+  sopData.step3 = { steps };
+  _clearSectionCache(); // 重新渲染後 in-memory cache 會從 sopData 還原
+  render();
+}
+
+function removeStepCard(i) {
+  collectCurrentStep();
+  const steps = sopData.step3?.steps || [];
+  steps.splice(i, 1);
+  sopData.step3 = { steps };
+  _clearSectionCache();
+  render();
+}
+
+function addCaseCard() {
+  collectCurrentStep();
+  const cases = sopData.step4?.cases || [];
+  cases.push({});
+  sopData.step4 = { cases };
+  render();
+}
+
+function removeCaseCard(i) {
+  collectCurrentStep();
+  const cases = sopData.step4?.cases || [];
+  cases.splice(i, 1);
+  sopData.step4 = { cases };
+  render();
+}
+
+function addFaqItem() {
+  collectCurrentStep();
+  if (docType === 'sop') {
+    const faqs = sopData.step5?.faqs || [];
+    faqs.push({ q: '', a: '' });
+    sopData.step5 = { faqs };
+  } else {
+    const faqs = refData.step2?.faqs || [];
+    faqs.push({ q: '', a: '' });
+    refData.step2 = { faqs };
+  }
+  render();
+}
+
+function removeFaqItem(i) {
+  collectCurrentStep();
+  if (docType === 'sop') {
+    const faqs = sopData.step5?.faqs || [];
+    faqs.splice(i, 1);
+    sopData.step5 = { faqs };
+  } else {
+    const faqs = refData.step2?.faqs || [];
+    faqs.splice(i, 1);
+    refData.step2 = { faqs };
+  }
+  render();
+}
+
+function addRefItem() {
+  collectCurrentStep();
+  const items = refData.step1?.items || [];
+  items.push({});
+  refData.step1 = { items };
+  render();
+}
+
+function removeRefItem(i) {
+  collectCurrentStep();
+  const items = refData.step1?.items || [];
+  items.splice(i, 1);
+  refData.step1 = { items };
+  render();
+}
+
+// ── Radio handler ──────────────────────────────────────────
+function attachRadioHandlers() {
+  document.querySelectorAll('.radio-label').forEach(lbl => {
+    lbl.addEventListener('click', function() {
+      const rg = this.dataset.rg;
+      document.querySelectorAll(`[data-rg="${rg}"]`).forEach(l => l.classList.remove('selected'));
+      this.classList.add('selected');
+      const inp = this.querySelector('input');
+      if (inp) inp.checked = true;
+    });
+  });
+}
+
+// ── AI FAQ generation ──────────────────────────────────────
+async function generateFaq() {
+  const btn = document.getElementById('aiFaqBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 生成中...';
+
+  try {
+    const context = buildFaqContext();
+
+    const sysMsg = '你是一個專業的企業內部文件助理。';
+    const userMsg = `根據以下文件內容，生成 ${docType === 'sop' ? '10' : '6'} 個同事最可能詢問的問題。
+要求：口語化、涵蓋「怎麼做」「在哪裡」「什麼時候」「如果失敗」等不同角度。
+只輸出 JSON 陣列，每項只有問題字串，不要有其他文字。格式：["問題1", "問題2", ...]
+
+文件內容：
+${context}`;
+
+    const result = await callLocalLLM(sysMsg, userMsg);
+
+    // Parse JSON
+    const match = result.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('無法解析 AI 回應');
+    const questions = JSON.parse(match[0]);
+
+    // Inject into FAQ
+    collectCurrentStep();
+    const newFaqs = questions.map(q => ({ q: String(q), a: '' }));
+    if (docType === 'sop') {
+      const existing = (sopData.step5?.faqs || []).filter(f => f.q || f.a);
+      sopData.step5 = { faqs: [...existing, ...newFaqs] };
+    } else {
+      const existing = (refData.step2?.faqs || []).filter(f => f.q || f.a);
+      refData.step2 = { faqs: [...existing, ...newFaqs] };
+    }
+    render();
+    toast(`✅ 已生成 ${questions.length} 個問題`);
+  } catch(e) {
+    toast('❌ AI 生成失敗：' + (e.message || e));
+    const btnEl = document.getElementById('aiFaqBtn');
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '🤖 AI 幫我想問題'; }
+  }
+}
+
+function buildFaqContext() {
+  if (docType === 'sop') {
+    const s0 = sopData.step0 || {};
+    const s1 = sopData.step1 || {};
+    const s2 = sopData.step2 || {};
+    const s3 = sopData.step3 || {};
+    const parts = [
+      `SOP名稱：${s0.title || ''}`,
+      `核心總結：${s0.summary || ''}`,
+      `適用對象：${s1.who || ''}`,
+      `前置準備：${[s2.perm, s2.tools, s2.docs].filter(Boolean).join('、')}`,
+    ];
+    if (s3.steps?.length) {
+      parts.push('步驟：' + s3.steps.map((s,i) => `${i+1}. ${s.name} — ${s.action}`).join('；'));
+    }
+    return parts.join('\n');
+  } else {
+    const r0 = refData.step0 || {};
+    const r1 = refData.step1 || {};
+    const parts = [
+      `文件標題：${r0.title || ''}`,
+      `說明：${r0.summary || ''}`,
+    ];
+    if (r1.items?.length) {
+      parts.push('內容：' + r1.items.map(it => `[${it.cat}] ${it.desc}`).join('；'));
+    }
+    return parts.join('\n');
+  }
+}
+
+// ── AI 生成：改打 Mac Mini 本地 backend /chat（本地對話模型），不再呼叫 Gemini/OpenAI ──
+// 保留 callGemini / callOpenAI 名稱與簽章（多處呼叫），apiKey/model 參數已不使用。
+async function callLocalLLM(sysMsg, userMsg) {
+  const res = await fetch('/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system: sysMsg, message: userMsg }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `backend ${res.status}`);
+  }
+  const data = await res.json();
+  return data.answer || '';
+}
+async function callGemini(apiKey, model, sysMsg, userMsg) { return callLocalLLM(sysMsg, userMsg); }
+async function callOpenAI(apiKey, model, sysMsg, userMsg) { return callLocalLLM(sysMsg, userMsg); }
+
+// ── AI Quick Create ────────────────────────────────────────
+function renderAiTopicStep() {
+  return `
+    <div class="card-title">🤖 AI 快速建立</div>
+    <div class="ai-warning">
+      <span>⚠️</span>
+      <div><strong>適用範圍：</strong>簡單的資訊查詢、系統介紹、帳號申請說明等一兩句話就能描述清楚的內容。<br>
+      <strong>不適合：</strong>複雜的多步驟業務流程 — 請改用「📋 完整 SOP」表單，AI 自動生成的細節精準度較低。</div>
+    </div>
+    <div class="form-group">
+      <label>你想記錄什麼？</label>
+      <div class="form-hint">用一兩句話描述，例如：「eHRD 是什麼、在哪裡開啟」、「公司信箱的申請和使用方式」</div>
+      <textarea id="aiTopicInput" class="form-input" rows="3" placeholder="例如：差旅費請款的申請流程和注意事項">${esc(aiData.topic)}</textarea>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="submitTopic()" id="submitTopicBtn">讓 AI 開始提問 →</button>
+      <button class="btn-back" onclick="docType=null;render()">← 重新選擇類型</button>
+    </div>
+    <div id="topicLoading" style="display:none;margin-top:14px;color:#6b7280;font-size:13px;">
+      <span class="inline-spinner"></span>AI 正在生成問題...
+    </div>`;
+}
+
+function renderAiQuestionsStep() {
+  const qItems = aiData.questions.map((q, i) => `
+    <div class="question-item">
+      <div class="question-label">
+        <span class="question-num">${i + 1}</span>
+        <input class="form-input ai-question-edit" id="aiQ_${i}" value="${esc(q)}" placeholder="（可編輯）" style="flex:1;font-weight:500;">
+      </div>
+      <textarea class="form-input" id="aiAns_${i}" rows="2" placeholder="請填寫你的回答...">${esc(aiData.answers[i] || '')}</textarea>
+    </div>`).join('');
+  const imgs = aiData.images || [];
+
+  return `
+    <div class="card-title">AI 的問題</div>
+    <div class="card-subtitle">請盡量完整回答，AI 會根據這些答案生成文件。問題本身可以直接修改。</div>
+    <div class="ai-warning" style="margin-top:16px;">
+      <span>⚠️</span>
+      <span>如果主題比想像中複雜，建議改用<strong>「📋 完整 SOP」</strong>表單，以確保每個步驟都精準</span>
+    </div>
+    <div class="questions-list">${qItems}</div>
+    <div style="margin-top:24px;border-top:1px solid #e2e8f0;padding-top:18px;">
+      <label class="form-label" style="margin-bottom:10px;display:block;">📸 參考圖片 <span class="hint">（選填）</span></label>
+      ${renderSectionImgSection('ai_main', imgs)}
+    </div>
+    <div style="margin-top:24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="generateFromAnswers()" id="generateBtn">生成文件 →</button>
+      <button class="btn-back" onclick="aiStep=0;render()">← 重新描述主題</button>
+    </div>
+    <div id="genLoading" style="display:none;margin-top:14px;color:#6b7280;font-size:13px;">
+      <span class="inline-spinner"></span>AI 正在生成文件...
+    </div>`;
+}
+
+async function submitTopic() {
+  const topic = (document.getElementById('aiTopicInput')?.value || '').trim();
+  if (!topic) { toast('⚠️ 請先描述要記錄的內容'); return; }
+  aiData.topic = topic;
+
+  const btn = document.getElementById('submitTopicBtn');
+  const loading = document.getElementById('topicLoading');
+  btn.disabled = true;
+  loading.style.display = 'block';
+
+  try {
+    const { provider, model, apiKey } = loadSettings();
+    if (!apiKey) { toast('⚠️ 請先設定 API Key（右上角 ⚙️）'); btn.disabled = false; loading.style.display = 'none'; return; }
+
+    const sysMsg = '你是一個工作文件助手。根據使用者描述的主題，生成 5-8 個問題來收集足夠資訊以撰寫一份完整的工作說明文件。問題要涵蓋：這是什麼/用途、誰來使用、怎麼操作/步驟、注意事項、常見問題。輸出純 JSON 陣列，只有問題字串，不加說明，例：["問題1","問題2"]';
+    const userMsg = `使用者想記錄的主題：「${topic}」\n\n請生成問題（JSON 陣列）：`;
+
+    let raw = provider === 'gemini'
+      ? await callGemini(apiKey, model, sysMsg, userMsg)
+      : await callOpenAI(apiKey, model, sysMsg, userMsg);
+
+    const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const questions = JSON.parse(cleaned);
+    if (!Array.isArray(questions) || !questions.length) throw new Error('無法解析問題列表');
+
+    aiData.questions = questions;
+    aiData.answers = new Array(questions.length).fill('');
+    aiStep = 1;
+    render();
+  } catch(e) {
+    toast('❌ 生成問題失敗：' + (e.message || e));
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+
+async function generateFromAnswers() {
+  // Pick up edited questions and answers
+  aiData.questions = aiData.questions.map((q, i) => (document.getElementById(`aiQ_${i}`)?.value || q).trim());
+  const answers = aiData.questions.map((_, i) => (document.getElementById(`aiAns_${i}`)?.value || '').trim());
+  aiData.answers = answers;
+
+  const btn = document.getElementById('generateBtn');
+  const loading = document.getElementById('genLoading');
+  btn.disabled = true;
+  loading.style.display = 'block';
+
+  try {
+    const qaStr = aiData.questions.map((q, i) => `Q${i+1}：${q}\nA${i+1}：${answers[i] || '（未填寫）'}`).join('\n\n');
+
+    // 改成「AI 把回答整理成結構化欄位 JSON」，再用 generateSopMd() 組裝七段模板（與手動 SOP 同一條路）
+    // → 保證 frontmatter、七段標題、清楚的 chunk 界線，不再產出會污染知識庫的鬆散 blob。
+    const sysMsg = `你是 SOP 文件結構化助理。根據主題與問答，把內容整理成「結構化 JSON 物件」，欄位如下；沒有的就給空字串或空陣列，但每個鍵都要在：
+{
+  "title": "文件標題",
+  "dept": "負責部門（可空）",
+  "importance": "一般/重要/高（可空，預設一般）",
+  "summary": "一句話核心總結（必填，一句話講清楚這份在幹嘛）",
+  "who": "適用對象（誰要做這件事）",
+  "when": "適用情境（可空）",
+  "prep": "前置準備：需要的權限/工具/必要資料，整理成一段（可空）",
+  "steps": [ {"name":"步驟名稱","action":"具體動作（怎麼做）","who":"執行人（可空）","where":"操作位置/系統（可空）","done":"完成指標（可空）","note":"注意事項（可空）"} ],
+  "cases": [ {"problem":"異常狀況","solution":"解決方法"} ],
+  "faqs": [ {"q":"問題","a":"答案"} ],
+  "owner": "文件負責人（可空）"
+}
+要求：steps 要逐步拆開（每步一個物件）、faqs 至少 4 個。
+⚠️ 只輸出 JSON 物件本身：以 { 開頭、} 結尾，不要任何前後說明文字、不要用 \`\`\` 程式碼框。`;
+
+    const userMsg = `主題：「${aiData.topic}」\n\n問答資料：\n${qaStr}`;
+
+    // 解析失敗自動重試一次（本機模型偶爾吐非純 JSON）
+    let obj = null, lastErr = null;
+    for (let attempt = 0; attempt < 2 && obj === null; attempt++) {
+      try {
+        const raw = await callLocalLLM(sysMsg, userMsg);
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (!m) throw new Error('回應中找不到 JSON 物件');
+        obj = JSON.parse(m[0]);
+      } catch (e) { lastErr = e; }
+    }
+    if (obj === null) throw lastErr || new Error('無法解析 AI 回應');
+
+    // 把結構化欄位灌進 sopData，走 generateSopMd() 組裝（七段模板）
+    const today = new Date().toISOString().slice(0, 10);
+    const arr = (x) => Array.isArray(x) ? x : [];
+    sopData = {
+      step0: { title: obj.title || aiData.topic || '（未命名）', dept: obj.dept || '', importance: obj.importance || '一般', duration: '', summary: obj.summary || '', exclusionTags: '', similarDocs: '' },
+      step1: { who: obj.who || '', when: obj.when || '', nowho: '', nowhen: '' },
+      step2: { perm: '', tools: '', docs: obj.prep || '' },
+      step3: { steps: arr(obj.steps).map(s => ({ name: s.name || '', action: s.action || '', who: s.who || '', where: s.where || '', done: s.done || '', note: s.note || '' })) },
+      step4: { cases: arr(obj.cases).map(c => ({ problem: c.problem || '', solution: c.solution || '' })) },
+      step5: { faqs: arr(obj.faqs).filter(f => f && (f.q || f.a)).map(f => ({ q: f.q || '', a: f.a || '' })) },
+      step6: { date: today, owner: obj.owner || '', deputy: '', link: '' },
+    };
+
+    let md = generateSopMd(); // 與手動 SOP 完全同一條組裝路徑 → 七段、frontmatter、清楚界線
+
+    // 參考圖片（若有上傳）以獨立區塊附在最後，保持乾淨標題、不混進內文
+    const aiImgs = aiData.images || [];
+    if (aiImgs.length > 0) {
+      md += '\n\n---\n\n## 參考圖片\n' + aiImgs.map(img => `![${img.alt || '參考圖片'}](${img.url})`).join('\n');
+    }
+
+    aiData.generatedMd = md;
+    aiStep = 2;
+    render();
+  } catch(e) {
+    toast('❌ 生成文件失敗：' + (e.message || e));
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+
+// ── MD Generation ──────────────────────────────────────────
+function generateMd() {
+  if (docType === 'ai') return aiData.generatedMd || '';
+  return docType === 'sop' ? generateSopMd() : generateRefMd();
+}
+
+function generateSopMd() {
+  const s0 = sopData.step0 || {};
+  const s1 = sopData.step1 || {};
+  const s2 = sopData.step2 || {};
+  const s3 = sopData.step3 || {};
+  const s4 = sopData.step4 || {};
+  const s5 = sopData.step5 || {};
+  const s6 = sopData.step6 || {};
+
+  const exclusionTags = (s0.exclusionTags || '').split(',').map(t => t.trim()).filter(Boolean);
+  const similarDocs = (s0.similarDocs || '').split(',').map(t => t.trim()).filter(Boolean);
+
+  const lines = [];
+  lines.push('---');
+  lines.push(`namespace: ${s0.dept || '未分類'}`);
+  lines.push('doc_type: SOP');
+  lines.push(`exclusion_tags: [${exclusionTags.join(', ')}]`);
+  lines.push(`similar_docs: [${similarDocs.join(', ')}]`);
+  lines.push(`version: "${s6.date || new Date().toISOString().slice(0,10)}"`);
+  if (s6.owner) lines.push(`owner: "${s6.owner}"`);
+  lines.push('---');
+  lines.push('');
+  lines.push(`# ${s0.title || '（未命名）'}`);
+  const meta = [s0.dept && `**部門**：${s0.dept}`, `**重要程度**：${s0.importance || '一般'}`, s0.duration && `**預計耗時**：${s0.duration}`].filter(Boolean);
+  if (meta.length) lines.push('> ' + meta.join(' ｜ '));
+  lines.push('');
+  lines.push('## 一句話核心總結');
+  lines.push(s0.summary || '');
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## 適用對象');
+  lines.push('| 項目 | 詳細描述 |');
+  lines.push('|------|---------|');
+  if (s1.who) lines.push(`| 適用對象 | ${s1.who} |`);
+  if (s1.when) lines.push(`| 適用情境 | ${s1.when} |`);
+  if (s1.nowho) lines.push(`| 不適用對象 | ${s1.nowho} |`);
+  if (s1.nowhen) lines.push(`| 不適用情境 | ${s1.nowhen} |`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## 前置準備');
+  if (s2.perm) lines.push(`- **系統權限**：${s2.perm}`);
+  if (s2.tools) lines.push(`- **硬體/工具**：${s2.tools}`);
+  if (s2.docs) lines.push(`- **必要資料**：${s2.docs}`);
+  if (!s2.perm && !s2.tools && !s2.docs) lines.push('（無特殊前置需求）');
+  // 前置準備的示意圖
+  if (s2.images && s2.images.length > 0) {
+    lines.push('');
+    s2.images.forEach(img => lines.push(`![${img.alt || '前置準備示意圖'}](${img.url})`));
+  }
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## 標準步驟');
+  const steps = s3.steps || [];
+  if (steps.length) {
+    steps.forEach((s, i) => {
+      lines.push(`### 步驟 ${i+1}：${s.name || '（未命名）'}`);
+      if (s.who) lines.push(`- **執行人**：${s.who}`);
+      if (s.where) lines.push(`- **操作位置**：${s.where}`);
+      if (s.action) {
+        const actionLines = s.action.split('\n');
+        lines.push(`- **具體動作**：${actionLines[0]}`);
+        for (let j = 1; j < actionLines.length; j++) {
+          if (actionLines[j].trim()) lines.push(`  ${actionLines[j]}`);
+        }
+      }
+      if (s.done) lines.push(`- **完成指標**：${s.done}`);
+      if (s.note) lines.push(`- **注意事項**：${s.note}`);
+      // 步驟的示意圖
+      if (s.images && s.images.length > 0) {
+        s.images.forEach(img => lines.push(`![${img.alt || `步驟 ${i+1} 示意圖`}](${img.url})`));
+      }
+      lines.push('');
+    });
+  } else {
+    lines.push('（尚未填寫步驟）');
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('');
+  lines.push('## 異常處理');
+  const cases = s4.cases || [];
+  if (cases.length && cases.some(c => c.problem)) {
+    cases.forEach(c => {
+      if (!c.problem) return;
+      lines.push(`**狀況：${c.problem}**`);
+      if (c.solution) lines.push(`解決方法：${c.solution}`);
+      lines.push('');
+    });
+  } else {
+    lines.push('（暫無已知異常狀況）');
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('');
+  lines.push('## 常見問題 FAQ');
+  const faqs = (s5.faqs || []).filter(f => f.q && f.a);
+  if (faqs.length) {
+    faqs.forEach(f => {
+      lines.push(`**Q：${f.q}**`);
+      lines.push(`A：${f.a}`);
+      lines.push('');
+    });
+  } else {
+    lines.push('（尚未填寫 FAQ）');
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('');
+  lines.push('## 維護資訊');
+  if (s6.date) lines.push(`- **最後更新**：${s6.date}`);
+  if (s6.owner) lines.push(`- **文件負責人**：${s6.owner}`);
+  if (s6.deputy) lines.push(`- **職務代理人**：${s6.deputy}`);
+  if (s6.link) lines.push(`- **相關附件**：${s6.link}`);
+
+  return lines.join('\n');
+}
+
+function generateRefMd() {
+  const r0 = refData.step0 || {};
+  const r1 = refData.step1 || {};
+  const r2 = refData.step2 || {};
+
+  const lines = [];
+  lines.push('---');
+  lines.push('doc_type: REFERENCE');
+  lines.push(`version: "${new Date().toISOString().slice(0,10)}"`);
+  lines.push('---');
+  lines.push('');
+  lines.push(`# ${r0.title || '（未命名）'}`);
+  lines.push('');
+  lines.push('## 一句話說明');
+  lines.push(r0.summary || '');
+  if (r0.who) {
+    lines.push('');
+    lines.push(`**適用對象**：${r0.who}`);
+  }
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## 資訊內容');
+  lines.push('');
+  const items = r1.items || [];
+  if (items.length && items.some(it => it.desc)) {
+    items.forEach(it => {
+      if (!it.desc && !it.url) return;
+      lines.push(`### ${it.cat || '其他'}`);
+      if (it.desc) lines.push(it.desc);
+      if (it.url) lines.push(`（連結：${it.url}）`);
+      lines.push('');
+    });
+  } else {
+    lines.push('（尚未填寫資訊內容）');
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('');
+  lines.push('## 常見問題 FAQ');
+  lines.push('');
+  const faqs = (r2.faqs || []).filter(f => f.q && f.a);
+  if (faqs.length) {
+    faqs.forEach(f => {
+      lines.push(`**Q：${f.q}**`);
+      lines.push(`A：${f.a}`);
+      lines.push('');
+    });
+  } else {
+    lines.push('（尚未填寫 FAQ）');
+    lines.push('');
+  }
+  lines.push('---');
+  lines.push('');
+  lines.push('## 維護資訊');
+  lines.push(`- **最後更新**：${new Date().toLocaleDateString('zh-TW')}`);
+
+  // Document-level reference images (same as SOP)
+  const refImgs = refData.images || [];
+  if (refImgs.length > 0) {
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## 參考圖片');
+    refImgs.forEach(img => {
+      lines.push(`![${img.alt || '參考圖片'}](${img.url})`);
+    });
+  }
+
+  return lines.join('\n');
+}
+
+// ── Download ───────────────────────────────────────────────
+function validateMd(content) {
+  const errors = [];
+  const warnings = [];
+
+  if (!content || !content.trim()) {
+    errors.push('❌ 文件內容為空');
+    return { errors, warnings, isValid: false };
+  }
+
+  // AI 快速建立的文件結構由 AI 自由產生，只檢查基本要求
+  if (docType === 'ai') {
+    if (!/^#\s+.+/m.test(content)) errors.push('❌ AI 生成內容缺少 H1 主標題（可能 AI 回應異常）');
+    return { errors, warnings, isValid: errors.length === 0 };
+  }
+
+  // SOP / Ref 走嚴格驗證
+  if (!content.startsWith('---')) errors.push('❌ 缺少 YAML 前置資料');
+  if (!/^# .+/m.test(content)) errors.push('❌ 缺少 H1 主標題');
+
+  if (docType === 'sop') {
+    ['適用對象','前置準備','標準步驟','維護資訊'].forEach(s => {
+      if (!content.includes(`## ${s}`)) errors.push(`❌ 缺少必要區塊：## ${s}`);
+    });
+    if (/exclusion_tags: \[\]/.test(content)) {
+      warnings.push('⚠️ exclusion_tags 為空，建議填寫以防 AI 混淆相似流程');
+    }
+  } else if (docType === 'ref') {
+    ['資訊內容','維護資訊'].forEach(s => {
+      if (!content.includes(`## ${s}`)) errors.push(`❌ 缺少必要區塊：## ${s}`);
+    });
+  }
+  return { errors, warnings, isValid: errors.length === 0 };
+}
+
+function downloadMd() {
+  const content = generateMd();
+  const { errors, warnings, isValid } = validateMd(content);
+
+  if (!isValid) {
+    alert('文件驗證失敗，請修正以下問題：\n\n' + errors.join('\n'));
+    return;
+  }
+  if (warnings.length > 0) {
+    if (!confirm('注意事項：\n\n' + warnings.join('\n') + '\n\n確定要下載嗎？')) return;
+  }
+
+  const filename = (document.getElementById('filenameInput')?.value.trim() || 'document') + '.md';
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ 檔案下載中...');
+}
+
+// ── 儲存（本機 backend，不再經過 Google Drive / OAuth）────────────────
+// （已移除 Google OAuth initGIS / Client ID — 存檔走 POST /sop-files）
+
+// 改成存到 Mac Mini 本地 backend（POST /sop-files），寫入 sop-files/，backend 自動索引。
+// 函式名保留 uploadToDrive（按鈕 onclick 沿用），不再經過 Google Drive / OAuth。
+// 透過對外 tunnel 開啟時，存檔（POST /sop-files）會被後端擋下（限內網）→ 先提示，避免白點一次
+const PUBLIC_HOSTNAMES = ['<PUBLIC_HOSTNAME>'];
+function isPublicAccess() { return PUBLIC_HOSTNAMES.includes(location.hostname); }
+
+async function uploadToDrive() {
+  if (isPublicAccess()) {
+    showUploadMsg('⚠ 新增/儲存文件僅限公司內網。請連公司網路（用 http://&lt;Mac-Mini-IP&gt;:<PORT> 開啟）後再儲存。', true);
+    return;
+  }
+  const btn = document.getElementById('uploadBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></span> 送出中...'; }
+  showUploadMsg('');
+
+  const title = (document.getElementById('filenameInput')?.value.trim() || 'document');
+  const content = generateMd();
+  // 投稿者：優先用 SOP 維護資訊的「文件負責人」，否則填內網生成器
+  const submitter = (sopData.step6 && sopData.step6.owner) || (docType === 'ref' && refData.step0 && refData.step0.owner) || '內網生成器';
+
+  try {
+    // 改為「投稿待審」：不再直接寫 sop-files/，與 LINE／瀏覽器表單一致進待審區
+    const res = await fetch('/sop-pending', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: title, md: content, submitter, type: (docType === 'ref' ? 'Ref' : 'SOP'), op: 'new', source: 'generator' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const badge = data.precheck && data.precheck.badge ? data.precheck.badge : '';
+    showUploadMsg(`✅ 已送出待審（編號 #${data.id}）${badge}。將由審核者核可後才會正式上架，可請審核者至審核頁處理。`, false);
+  } catch(e) {
+    showUploadMsg('❌ 送出失敗（backend 未啟動？）：' + (e.message || e), true);
+  } finally {
+    const btnEl = document.getElementById('uploadBtn');
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '📤 送出待審'; }
+  }
+}
+
+function showUploadMsg(msg, isError) {
+  const el = document.getElementById('uploadMsg');
+  if (!el) return;
+  el.innerHTML = msg;
+  el.className = 'upload-msg ' + (isError ? 'err' : 'ok');
+}
+
+// ── Settings modal ─────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+// Click outside modal to close
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+// ── Auto-save（每 30 秒 + 關閉頁面前）──────────────────────
+setInterval(() => {
+  if (!docType) return;
+  try { collectCurrentStep(); } catch(e) {}
+  saveDraft();
+}, 30000);
+
+window.addEventListener('beforeunload', () => {
+  if (!docType) return;
+  try { collectCurrentStep(); } catch(e) {}
+  saveDraft();
+});
+
+// ── Init ───────────────────────────────────────────────────
+render();
+</script>
+
+</body>
+</html>

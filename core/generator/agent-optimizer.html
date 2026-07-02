@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent-Ready 文件轉換器</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  background: #f0f4ff;
+  color: #2d3748;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.app-header {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+}
+.app-header h1 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.back-link {
+  font-size: 13px; color: rgba(255,255,255,0.75); text-decoration: none; padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; transition: all 0.15s; background: rgba(255,255,255,0.08);
+}
+.back-link:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.35); }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 16px; transition: all 0.15s; color: rgba(255,255,255,0.8);
+}
+.icon-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); color: #fff; }
+
+/* ── Main ── */
+.main { max-width: 900px; margin: 0 auto; padding: 40px 20px 100px; }
+
+/* ── Explainer ── */
+.explainer {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+}
+.explainer h2 { font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.explainer-lead { font-size: 14px; color: #475569; line-height: 1.7; margin-bottom: 20px; }
+.diff-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;
+}
+.diff-col { border-radius: 12px; padding: 16px 18px; }
+.diff-col.before { background: #fff1f2; border: 1px solid #fecdd3; }
+.diff-col.after  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.diff-col h4 { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 10px; }
+.diff-col.before h4 { color: #dc2626; }
+.diff-col.after  h4 { color: #16a34a; }
+.diff-item { font-size: 13px; color: #374151; line-height: 1.6; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.diff-item:last-child { border-bottom: none; }
+.diff-item code { font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; }
+.explainer-note {
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+  padding: 12px 16px; font-size: 13px; color: #92400e; line-height: 1.6;
+}
+.explainer-note strong { color: #78350f; }
+
+/* ── Input Card ── */
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+}
+.card-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+.card-subtitle { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+
+/* ── Input methods ── */
+.input-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.input-tab {
+  padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: pointer; transition: all 0.15s;
+}
+.input-tab.active { border-color: #4f8ef7; background: #eff6ff; color: #2563eb; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Drive selector ── */
+.drive-file-list { max-height: 280px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 10px; }
+.drive-file-item {
+  display: flex; align-items: center; gap: 12px; padding: 11px 16px;
+  border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.12s;
+  font-size: 13.5px; color: #374151;
+}
+.drive-file-item:last-child { border-bottom: none; }
+.drive-file-item:hover { background: #f8fafc; }
+.drive-file-item.selected { background: #eff6ff; }
+.drive-file-item .file-icon { font-size: 18px; flex-shrink: 0; }
+.drive-file-item .file-name { flex: 1; font-weight: 500; }
+.drive-file-item .file-check { font-size: 18px; color: #2563eb; }
+.drive-load-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+  background: #4f8ef7; color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-bottom: 14px;
+}
+.drive-load-btn:hover { background: #3b7de8; }
+.drive-load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Upload & Paste ── */
+.upload-zone {
+  border: 2px dashed #cbd5e1; border-radius: 12px; padding: 40px 20px;
+  text-align: center; cursor: pointer; transition: all 0.15s; color: #64748b;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: #4f8ef7; background: #eff6ff; color: #2563eb; }
+.upload-zone p { font-size: 14px; margin-top: 8px; }
+.upload-zone .icon { font-size: 36px; }
+
+.form-textarea {
+  width: 100%; min-height: 200px; padding: 12px 14px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; font-size: 13px; font-family: monospace; resize: vertical;
+  color: #2d3748; transition: border-color 0.15s; line-height: 1.6;
+}
+.form-textarea:focus { outline: none; border-color: #4f8ef7; }
+
+/* ── Selected file display ── */
+.selected-file-bar {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+  margin-top: 14px; font-size: 13.5px; color: #15803d; font-weight: 500;
+}
+.selected-file-bar .clear-btn {
+  margin-left: auto; background: none; border: none; cursor: pointer; color: #64748b; font-size: 16px;
+}
+
+/* ── Convert button ── */
+.convert-section { text-align: center; margin-top: 8px; }
+.btn-convert {
+  display: inline-flex; align-items: center; gap: 10px; padding: 14px 36px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff;
+  border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 16px rgba(124,58,237,0.3);
+}
+.btn-convert:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+.btn-convert:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Loading ── */
+.loading-block { text-align: center; padding: 40px 0; }
+.spinner {
+  width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #7c3aed;
+  border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-block p { color: #64748b; font-size: 14px; }
+
+/* ── Result ── */
+.result-card {
+  background: #fff; border-radius: 16px; padding: 28px 32px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-top: 24px;
+}
+.result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+.result-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+.result-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.result-actions button {
+  padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; border: none;
+}
+.btn-download { background: #4f8ef7; color: #fff; }
+.btn-download:hover { background: #3b7de8; }
+.btn-upload-drive { background: #10b981; color: #fff; }
+.btn-upload-drive:hover { background: #059669; }
+.btn-copy { background: #f1f5f9; color: #374151; border: 1.5px solid #e2e8f0; }
+.btn-copy:hover { background: #e2e8f0; }
+
+.filename-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.filename-input {
+  flex: 1; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; color: #2d3748;
+}
+.filename-input:focus { outline: none; border-color: #7c3aed; }
+.filename-ext { font-size: 13px; color: #64748b; font-weight: 500; white-space: nowrap; }
+
+.md-preview {
+  background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  padding: 18px 20px; font-family: monospace; font-size: 12.5px; line-height: 1.7;
+  white-space: pre-wrap; max-height: 500px; overflow-y: auto; color: #334155;
+}
+
+.upload-status { margin-top: 12px; font-size: 13px; color: #64748b; text-align: center; min-height: 20px; }
+.upload-status.success { color: #15803d; font-weight: 600; }
+.upload-status.error { color: #dc2626; }
+
+/* ── Settings modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+  z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal {
+  background: #fff; border-radius: 18px; padding: 28px 32px; width: 100%; max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal h2 { font-size: 17px; font-weight: 700; margin-bottom: 20px; color: #0f172a; }
+.modal .form-group { margin-bottom: 16px; }
+.modal label { font-size: 12.5px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
+.modal input, .modal select {
+  width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-actions button { flex: 1; padding: 10px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+.btn-save { background: #4f8ef7; color: #fff; }
+.btn-cancel { background: #f1f5f9; color: #374151; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1e293b; color: #fff; padding: 11px 22px; border-radius: 10px;
+  font-size: 13.5px; opacity: 0; transition: all 0.25s; z-index: 999; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 640px) {
+  .main { padding: 24px 14px 80px; }
+  .explainer, .card, .result-card { padding: 20px 18px; }
+  .diff-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>⚡ Agent-Ready 文件轉換器</h1>
+  <div class="header-actions">
+    <a href="./sop-generator.html" class="back-link">🛠️ SOP 生成器</a>
+    <a href="./index.html" class="back-link">← AI Bot</a>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ── 說明區 ── -->
+  <div class="explainer">
+    <h2>⚡ 什麼是 Agent-Ready 文件？</h2>
+    <p class="explainer-lead">
+      一般 SOP 文件是寫給「人」看的，用詞允許模糊、步驟可以跳著理解。但如果要讓 <strong>AI Agent 自動執行</strong>任務（例如自動填表、自動審核、自動通知），文件就必須達到機器也能 100% 理解的精確度。
+      <br><br>
+      此工具會用 AI 將你現有的 SOP 文件重新改寫成 <strong>Agent-Ready 格式</strong>，補全所有模糊描述、加入精確的判斷條件與執行指引。
+    </p>
+
+    <div class="diff-grid">
+      <div class="diff-col before">
+        <h4>❌ 一般 SOP（給人讀）</h4>
+        <div class="diff-item">「填寫申請單後送出」</div>
+        <div class="diff-item">「確認送出成功即可」</div>
+        <div class="diff-item">「如有問題聯絡主管」</div>
+        <div class="diff-item">「盡快處理，通常 1-2 天」</div>
+        <div class="diff-item">「相關人員需知會」</div>
+      </div>
+      <div class="diff-col after">
+        <h4>✅ Agent-Ready（給機器執行）</h4>
+        <div class="diff-item">系統：<code>eHRD</code> → 申請管理 → 新增申請 → 類型選「請假」</div>
+        <div class="diff-item">成功條件：頁面顯示「申請編號」字樣</div>
+        <div class="diff-item">失敗處理：記錄錯誤代碼，轉人工審核流程</div>
+        <div class="diff-item">期限：申請日起算 <code>2</code> 個工作天內</div>
+        <div class="diff-item">通知對象：直屬主管（通訊錄：主管欄位）</div>
+      </div>
+    </div>
+
+    <div class="explainer-note">
+      ⚠️ <strong>轉換後請務必人工審核：</strong>AI 會根據現有內容推斷補全，若原文件有遺漏資訊（如系統 URL、負責人名稱），AI 會標示 <code>[待補全]</code>，需要人工填入正確資料後才能交給 Agent 使用。
+    </div>
+  </div>
+
+  <!-- ── 輸入區 ── -->
+  <div class="card">
+    <div class="card-title">選擇要轉換的文件</div>
+    <div class="card-subtitle">支援從 Mac Mini SOP 文件庫選取、從本機上傳 .md 檔，或直接貼上內容</div>
+
+    <div class="input-tabs">
+      <button class="input-tab active" onclick="switchTab('drive')">📚 從 SOP 文件庫選取</button>
+      <button class="input-tab" onclick="switchTab('upload')">📁 上傳 .md 檔</button>
+      <button class="input-tab" onclick="switchTab('paste')">📋 貼上內容</button>
+    </div>
+
+    <!-- Drive tab -->
+    <div class="tab-panel active" id="tab-drive">
+      <button class="drive-load-btn" onclick="loadDriveFiles()" id="driveLoadBtn">
+        🔄 載入文件列表
+      </button>
+      <div id="driveFileList" style="display:none;">
+        <div class="drive-file-list" id="driveFiles"></div>
+      </div>
+    </div>
+
+    <!-- Upload tab -->
+    <div class="tab-panel" id="tab-upload">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleFileDrop(event)">
+        <div class="icon">📄</div>
+        <p>點擊選擇 .md 檔案，或拖曳到這裡</p>
+      </div>
+      <input type="file" id="fileInput" accept=".md,.txt" style="display:none" onchange="handleFileSelect(this)">
+    </div>
+
+    <!-- Paste tab -->
+    <div class="tab-panel" id="tab-paste">
+      <textarea class="form-textarea" id="pasteArea" placeholder="將 .md 文件內容貼在這裡...&#10;&#10;# 文件標題&#10;## 步驟一&#10;..."></textarea>
+    </div>
+
+    <!-- Selected file display -->
+    <div id="selectedFileBar" style="display:none;" class="selected-file-bar">
+      <span>📄</span>
+      <span id="selectedFileName"></span>
+      <button class="clear-btn" onclick="clearInput()" title="取消選擇">✕</button>
+    </div>
+
+    <div class="convert-section" style="margin-top:24px;">
+      <button class="btn-convert" onclick="startConvert()" id="convertBtn">
+        ⚡ 轉換為 Agent-Ready 格式
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Loading ── -->
+  <div class="loading-block" id="loadingBlock" style="display:none;">
+    <div class="spinner"></div>
+    <p>AI 正在分析並改寫文件，請稍候...</p>
+    <p style="margin-top:6px;font-size:12px;color:#94a3b8;">依文件長度約需 15-30 秒</p>
+  </div>
+
+  <!-- ── Result ── -->
+  <div class="result-card" id="resultCard" style="display:none;">
+    <div class="result-header">
+      <div class="result-title">✅ 轉換完成！</div>
+      <div class="result-actions">
+        <button class="btn-copy" onclick="copyResult()">📋 複製</button>
+        <button class="btn-download" onclick="downloadResult()">⬇️ 下載 .md</button>
+        <button class="btn-upload-drive" onclick="uploadResult()">💾 儲存到 Mac Mini</button>
+      </div>
+    </div>
+    <div class="filename-row">
+      <input class="filename-input" id="resultFilename" value="agent-ready-doc" placeholder="檔案名稱">
+      <span class="filename-ext">.md</span>
+    </div>
+    <pre class="md-preview" id="mdPreview"></pre>
+    <div class="upload-status" id="uploadStatus"></div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+// （已移除 Google Drive API Key / OAuth Client ID / FOLDER_ID — 全部改走本機 backend）
+const MODELS = {
+  gemini: ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1']
+};
+
+// ── State ──────────────────────────────────────────────────
+let currentTab = 'drive';
+let inputContent = '';   // the .md content to convert
+let inputFilename = '';  // original filename
+let resultContent = '';  // converted .md
+let driveFiles = [];
+let selectedDriveFile = null;
+let oauthToken = null;
+let gisInited = false;
+let tokenClient = null;
+let pendingAction = null; // 'loadFiles' | 'upload'
+
+// ── Tab switching ───────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.input-tab').forEach((el, i) => {
+    const tabs = ['drive', 'upload', 'paste'];
+    el.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  clearInput();
+}
+
+// ── SOP 文件載入（改讀 Mac Mini 本地 backend GET /sop-files，不再經過 Google Drive）──
+async function loadDriveFiles() {
+  const btn = document.getElementById('driveLoadBtn');
+  btn.disabled = true;
+  btn.textContent = '載入中...';
+  try {
+    await fetchDriveFiles();
+    btn.textContent = '重新整理列表';
+    btn.disabled = false;
+  } catch(e) {
+    btn.textContent = '🔄 載入文件列表';
+    btn.disabled = false;
+    toast('❌ 載入失敗（backend 未啟動？）：' + (e.message || e));
+  }
+}
+
+async function fetchDriveFiles() {
+  const res = await fetch('/sop-files');
+  if (!res.ok) throw new Error('無法讀取文件清單');
+  const data = await res.json();
+  // backend 回傳 { id, name（含 .md）, content }；直接保留 content 供 selectDriveFile 使用
+  driveFiles = data.files || [];
+  renderDriveList();
+}
+
+function renderDriveList() {
+  const container = document.getElementById('driveFiles');
+  const listWrap = document.getElementById('driveFileList');
+  if (!driveFiles.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">Drive 資料夾內沒有 .md 文件</div>';
+  } else {
+    container.innerHTML = driveFiles.map(f => `
+      <div class="drive-file-item ${selectedDriveFile?.id === f.id ? 'selected' : ''}" onclick="selectDriveFile('${f.id}')">
+        <span class="file-icon">📄</span>
+        <span class="file-name">${esc(f.name)}</span>
+        ${selectedDriveFile?.id === f.id ? '<span class="file-check">✓</span>' : ''}
+      </div>`).join('');
+  }
+  listWrap.style.display = 'block';
+}
+
+async function selectDriveFile(fileId) {
+  const file = driveFiles.find(f => f.id === fileId);
+  if (!file) return;
+  selectedDriveFile = file;
+  renderDriveList();
+  // backend 已把 content 一併回傳，直接使用，不需再下載
+  inputContent = file.content || '';
+  inputFilename = file.name.replace(/\.[^.]+$/, '');
+  showSelectedBar(file.name);
+}
+
+// ── File upload ─────────────────────────────────────────────
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  readFile(file);
+}
+
+function handleFileDrop(event) {
+  event.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if (file) readFile(file);
+}
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    inputContent = e.target.result;
+    inputFilename = file.name.replace(/\.[^.]+$/, '');
+    showSelectedBar(file.name);
+  };
+  reader.readAsText(file);
+}
+
+function showSelectedBar(name) {
+  document.getElementById('selectedFileName').textContent = name;
+  document.getElementById('selectedFileBar').style.display = 'flex';
+}
+
+function clearInput() {
+  inputContent = '';
+  inputFilename = '';
+  selectedDriveFile = null;
+  document.getElementById('selectedFileBar').style.display = 'none';
+  document.getElementById('pasteArea').value = '';
+  if (driveFiles.length) renderDriveList();
+}
+
+// ── Convert ─────────────────────────────────────────────────
+async function startConvert() {
+  // Get content based on tab
+  let content = inputContent;
+  if (currentTab === 'paste') {
+    content = document.getElementById('pasteArea').value.trim();
+  }
+  if (!content) {
+    toast('⚠️ 請先選擇或貼上文件內容');
+    return;
+  }
+
+  const { provider, model } = getSettings();
+
+  document.getElementById('convertBtn').disabled = true;
+  document.getElementById('loadingBlock').style.display = 'block';
+  document.getElementById('resultCard').style.display = 'none';
+  window.scrollTo({ top: document.getElementById('loadingBlock').offsetTop - 80, behavior: 'smooth' });
+
+  try {
+    const sysMsg = `你是一個 AI Agent 文件工程師，專門將人工撰寫的 SOP 文件改寫成 AI Agent 可以 100% 精確執行的規格文件。
+
+改寫規則：
+1. 每個步驟必須包含：【系統/位置】【具體操作路徑】【輸入值/選項】【成功判斷標準】【失敗處理】
+2. 所有模糊詞必須改寫為具體描述：
+   - 「盡快」→「在 X 工作天內」（若無法確定填 [待補全：時限]）
+   - 「相關人員」→ 具體角色名稱（若無法確定填 [待補全：人員]）
+   - 「通常」「一般來說」→ 移除，改為明確條件
+   - 「聯絡主管」→「通知 [待補全：主管姓名/聯絡方式]，說明：{具體說明內容}」
+3. 每個判斷點必須寫成 IF/THEN/ELSE 格式
+4. 若原文件缺少關鍵資訊，在該處插入 [待補全：說明缺少什麼]，不要自行捏造
+5. 在文件開頭加上 Agent 執行前必須確認的「前置條件清單」
+6. 在文件結尾加上「驗收標準」，說明整個流程完成的判斷依據
+
+輸出格式為 Markdown，開頭加上標記：
+> ⚡ **此文件為 Agent-Ready 格式** — 由 AI 轉換自人工 SOP，[待補全] 標記處需人工確認後方可交付 Agent 執行。`;
+
+    const userMsg = `請將以下 SOP 文件改寫為 Agent-Ready 格式：\n\n${content}`;
+
+    let result = '';
+    if (provider === 'gemini') {
+      result = await callGemini(apiKey, model, sysMsg, userMsg);
+    } else {
+      result = await callOpenAI(apiKey, model, sysMsg, userMsg);
+    }
+
+    resultContent = result;
+    const suggestedName = (inputFilename || 'document') + '-agent-ready';
+    document.getElementById('resultFilename').value = suggestedName;
+    document.getElementById('mdPreview').textContent = result;
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('uploadStatus').textContent = '';
+    window.scrollTo({ top: document.getElementById('resultCard').offsetTop - 80, behavior: 'smooth' });
+  } catch(e) {
+    toast('❌ 轉換失敗：' + (e.message || e));
+  }
+
+  document.getElementById('loadingBlock').style.display = 'none';
+  document.getElementById('convertBtn').disabled = false;
+}
+
+// ── Result actions ──────────────────────────────────────────
+function copyResult() {
+  navigator.clipboard.writeText(resultContent).then(() => toast('✅ 已複製到剪貼簿'));
+}
+
+function downloadResult() {
+  const name = (document.getElementById('resultFilename').value.trim() || 'agent-ready') + '.md';
+  const blob = new Blob([resultContent], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+
+// 透過對外 tunnel 開啟時，存檔（POST /sop-files）會被後端擋下（限內網）→ 先提示
+const PUBLIC_HOSTNAMES = ['<PUBLIC_HOSTNAME>'];
+function isPublicAccess() { return PUBLIC_HOSTNAMES.includes(location.hostname); }
+
+// 改成存到 Mac Mini 本地 backend（POST /sop-files），不再經過 Google Drive
+async function uploadResult() {
+  const statusEl = document.getElementById('uploadStatus');
+  if (isPublicAccess()) {
+    statusEl.textContent = '⚠ 新增/儲存文件僅限公司內網。請連公司網路後再儲存。';
+    statusEl.className = 'upload-status error';
+    return;
+  }
+  statusEl.textContent = '儲存中...';
+  statusEl.className = 'upload-status';
+  try {
+    await doUpload();
+  } catch(e) {
+    statusEl.textContent = '❌ 儲存失敗（backend 未啟動？）：' + (e.message || e);
+    statusEl.className = 'upload-status error';
+  }
+}
+
+async function doUpload() {
+  const statusEl = document.getElementById('uploadStatus');
+  const title = (document.getElementById('resultFilename').value.trim() || 'agent-ready');
+  statusEl.textContent = '送出中...';
+
+  // 改為投稿待審（與其他入口一致），不再直接寫 sop-files/
+  const res = await fetch('/sop-pending', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: title, md: resultContent, submitter: '內網生成器', type: 'Ref', op: 'new', source: 'agent-optimizer' }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  statusEl.textContent = `✅ 已送出待審（編號 #${data.id}）${(data.precheck && data.precheck.badge) || ''}，待審核者核可後上架。`;
+  statusEl.className = 'upload-status success';
+}
+
+// （已移除 Google OAuth：載入/儲存文件全部走本機 backend /sop-files）
+
+// ── AI 轉換：改打 Mac Mini 本地 backend /chat（本地對話模型），不再呼叫 Gemini/OpenAI ──
+// 保留 callGemini / callOpenAI 名稱與簽章，apiKey/model 參數已不使用。
+async function callLocalLLM(sysMsg, userMsg) {
+  const res = await fetch('/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system: sysMsg, message: userMsg }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `backend ${res.status}`);
+  }
+  const data = await res.json();
+  return data.answer || '';
+}
+async function callGemini(apiKey, model, sysMsg, userMsg) { return callLocalLLM(sysMsg, userMsg); }
+async function callOpenAI(apiKey, model, sysMsg, userMsg) { return callLocalLLM(sysMsg, userMsg); }
+
+// ── Settings ────────────────────────────────────────────────
+// AI 轉換已改用 Mac Mini 本地模型，不需要 API Key。回傳 placeholder 讓「沒有 key 就擋下」的檢查通過。
+function getSettings() {
+  return {
+    apiKey: 'local',
+    provider: 'local',
+    model: 'local'
+  };
+}
+
+// （已移除 API Key / 模型設定 modal 與相關函式 — AI 走本機後端，不需金鑰）
+
+// ── Utilities ───────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, duration = 2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+</script>
+</body>
+</html>
