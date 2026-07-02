@@ -60,6 +60,10 @@ So instead of a SaaS chatbot, this is:
 |---|---|
 | ![line sop](./docs/images/line-sop.png) | ![line attendance](./docs/images/line-attendance.png) |
 
+**The LINE attendance bot's actual n8n workflow** — 57 nodes: webhook intake → image/text branch → OCR slip parsing with dedup-and-merge, `/sop` fast-path, the natural-language leave agent, handover routing, and scheduled jobs for daily digest and cleanup (IDs/tokens redacted):
+
+![n8n workflow](./docs/images/n8n-workflow.png)
+
 **SOP generator, AI quick-build** — describe a process in plain words; the local LLM interviews you for exactly what a newcomer would get stuck on, then assembles the document:
 
 ![generator quick-build](./docs/images/gen-quickbuild.png)

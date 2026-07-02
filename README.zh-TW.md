@@ -60,6 +60,10 @@
 |---|---|
 | ![line sop](./docs/images/line-sop.png) | ![line attendance](./docs/images/line-attendance.png) |
 
+**LINE 出勤機器人的實際 n8n workflow**——57 個節點:webhook 進線 → 圖片/文字分流 → 假單 OCR 解析與去重合併 → `/sop` 快速通道 → 自然語言請假 Agent → 交接路由 → 每日早報與清理排程(ID/token 已遮蓋):
+
+![n8n workflow](./docs/images/n8n-workflow.png)
+
 **SOP 生成器・AI 快速建立**——用白話描述流程,本機 LLM 針對「新手會卡住的地方」反問你,再自動組裝文件:
 
 ![生成器快速建立](./docs/images/gen-quickbuild.png)
