@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>部門 SOP 助理</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background: #f0f2f5;
+      color: #1a1a2e;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: #1a2332;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-logo .icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #4f8ef7, #7c5cfc);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .sidebar-logo h1 { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+    .sidebar-logo p { font-size: 10px; color: rgba(255,255,255,0.45); letter-spacing: 1px; text-transform: uppercase; }
+
+    .sidebar-section { padding: 12px 16px 8px; }
+    .sidebar-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .quick-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 12px;
+      margin-bottom: 4px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.8);
+      font-size: 12.5px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .quick-btn:hover {
+      background: rgba(79,142,247,0.2);
+      border-color: rgba(79,142,247,0.4);
+      color: #fff;
+    }
+
+    .quick-btn .file-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .settings-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .sop-status {
+      margin-top: 8px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+    }
+
+    .sop-status.loaded { color: #4ade80; }
+    .sop-status.error { color: #f87171; }
+
+    /* ── Chat Panel ── */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      min-width: 0;
+    }
+
+    .chat-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e8eaf0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+    }
+
+    .chat-header h2 { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+    .chat-header p { font-size: 12px; color: #8892a4; margin-top: 2px; }
+    #clearBtn { font-size: 12px; color: #8892a4; background: none; border: 1px solid #e8eaf0; border-radius: 6px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+    #clearBtn:hover { background: #f5f7fb; color: #e74c3c; border-color: #e74c3c; }
+    .chat-mode-toggle { display: flex; background: #f0f2f5; border-radius: 8px; padding: 3px; gap: 2px; }
+    .chat-mode-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; border: none; border-radius: 6px; cursor: pointer; background: transparent; color: #8892a4; transition: all 0.15s; white-space: nowrap; }
+    .chat-mode-btn.active { background: #fff; color: #4f8ef7; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      display: flex;
+      gap: 10px;
+      max-width: 85%;
+    }
+
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.bot { align-self: flex-start; }
+
+    .message-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .message.user .message-avatar { background: #4f8ef7; color: #fff; }
+    .message.bot .message-avatar {
+      background: linear-gradient(135deg, #4f8ef7, #7c5cfc);
+      color: #fff;
+    }
+
+    .message-content { display: flex; flex-direction: column; gap: 6px; }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .message.user .message-bubble {
+      background: #4f8ef7;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.bot .message-bubble {
+      background: #f5f7fa;
+      color: #1a1a2e;
+      border-bottom-left-radius: 4px;
+      border: 1px solid #e8eaf0;
+    }
+
+    /* Markdown styles inside bot bubble */
+    .message.bot .message-bubble h1,
+    .message.bot .message-bubble h2,
+    .message.bot .message-bubble h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 10px 0 6px;
+      color: #1a1a2e;
+    }
+
+    .message.bot .message-bubble p { margin-bottom: 8px; }
+    .message.bot .message-bubble p:last-child { margin-bottom: 0; }
+
+    .message.bot .message-bubble ul,
+    .message.bot .message-bubble ol {
+      padding-left: 20px;
+      margin-bottom: 8px;
+    }
+
+    .message.bot .message-bubble li { margin-bottom: 4px; }
+
+    .message.bot .message-bubble strong { font-weight: 700; color: #1a1a2e; }
+
+    .message.bot .message-bubble code {
+      background: #e8eaf0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* Source badge */
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 20px;
+      font-size: 11.5px;
+      color: #4f46e5;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      width: fit-content;
+    }
+
+    .source-badge:hover { background: #e0e7ff; }
+    .source-badge.none { background: #f5f5f5; border-color: #e0e0e0; color: #888; cursor: default; }
+
+    /* Follow-up chips */
+    .followup-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .followup-chip {
+      padding: 5px 12px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .followup-chip:hover {
+      background: #f0f4ff;
+      border-color: #4f8ef7;
+      color: #4f8ef7;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #f5f7fa;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid #e8eaf0;
+      width: fit-content;
+    }
+
+    .typing-dots { display: flex; gap: 4px; }
+
+    .typing-dots span {
+      width: 7px; height: 7px;
+      background: #8892a4;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+
+    /* Context bar */
+    .context-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: #eef2ff;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #4f46e5;
+    }
+    .context-bar.visible { display: flex; }
+    .context-bar-clear {
+      margin-left: auto;
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: #9ca3af;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .context-bar-clear:hover { background: #e0e7ff; color: #4f46e5; }
+
+    /* Followup button */
+    .followup-ask-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      padding: 5px 11px;
+      background: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .followup-ask-btn:hover { background: #eef2ff; border-color: #4f8ef7; color: #4f8ef7; }
+
+    /* Chat input */
+    .chat-input-area {
+      padding: 16px 20px;
+      border-top: 1px solid #e8eaf0;
+      background: #fff;
+    }
+
+    .chat-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f5f7fa;
+      border: 1.5px solid #e8eaf0;
+      border-radius: 14px;
+      padding: 10px 14px;
+      transition: border-color 0.15s;
+    }
+
+    .chat-input-wrapper:focus-within {
+      border-color: #4f8ef7;
+      background: #fff;
+    }
+
+    #messageInput {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      color: #1a1a2e;
+      outline: none;
+      resize: none;
+      min-height: 24px;
+      max-height: 120px;
+      line-height: 1.6;
+      font-family: inherit;
+      padding: 2px 0;
+    }
+
+    #messageInput::placeholder { color: #aab0bc; }
+
+    .send-btn {
+      width: 38px; height: 38px;
+      background: #4f8ef7;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+
+    .send-btn:hover { background: #3b7de8; }
+    .send-btn:disabled { background: #c4cdd6; cursor: not-allowed; }
+
+    /* ── Doc Panel ── */
+    .doc-panel {
+      width: 300px;
+      min-width: 300px;
+      background: #fff;
+      border-left: 1px solid #e8eaf0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .doc-panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e8eaf0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .doc-panel-header h3 { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+
+    .doc-panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .doc-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #b0b8c4;
+      text-align: center;
+      font-size: 13px;
+      gap: 10px;
+    }
+
+    .doc-empty .icon { font-size: 36px; opacity: 0.4; }
+
+    .doc-source-card {
+      border: 1px solid #e8eaf0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .doc-source-header {
+      padding: 10px 14px;
+      background: #f5f7fa;
+      border-bottom: 1px solid #e8eaf0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .doc-source-header span { font-size: 12.5px; font-weight: 600; color: #4f46e5; }
+    .doc-source-header small { font-size: 11px; color: #8892a4; margin-left: auto; }
+
+    .doc-source-excerpt {
+      padding: 12px 14px;
+      font-size: 12.5px;
+      color: #4b5563;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .doc-source-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      background: #f5f7fa;
+      border-top: 1px solid #e8eaf0;
+      color: #4f8ef7;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .doc-source-link:hover { background: #eef2ff; }
+
+    /* ── Settings Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 580px;
+      max-width: 95vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .modal-inner { padding: 24px 28px 28px; overflow-y: auto; flex: 1; }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .modal > .modal-inner > p { font-size: 13px; color: #6b7280; margin-bottom: 0; }
+
+    /* Settings tabs */
+    .settings-tabs { display: flex; border-bottom: 1px solid #f0f2f5; margin: 16px -28px 20px; padding: 0 28px; }
+    .settings-tab { padding: 9px 16px; border: none; background: none; font-size: 13px; font-weight: 600; color: #8892a4; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .settings-tab.active { color: #4f8ef7; border-bottom-color: #4f8ef7; }
+
+    /* Key list */
+    .key-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .key-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; }
+    .key-item .key-index { font-size: 11px; font-weight: 700; color: #9ca3af; min-width: 20px; }
+    .key-item .key-mask { flex: 1; font-size: 12.5px; font-family: monospace; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .key-item .key-status { font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: 600; flex-shrink: 0; }
+    .key-status-ok { background: #f0fdf4; color: #16a34a; }
+    .key-status-fail { background: #fee2e2; color: #dc2626; }
+    .key-status-active { background: #eef2ff; color: #4f46e5; }
+    .key-remove { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 16px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; }
+    .key-remove:hover { color: #ef4444; background: #fee2e2; }
+    .key-add-row { display: flex; gap: 8px; }
+    .key-add-row input { flex: 1; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; outline: none; color: #374151; font-family: monospace; }
+    .key-add-row input:focus { border-color: #4f8ef7; }
+    .key-note { font-size: 12px; color: #9ca3af; margin-top: 8px; line-height: 1.6; }
+
+    /* Tutorial */
+    .tutorial-section { margin-bottom: 20px; }
+    .tutorial-section h4 { font-size: 13.5px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .tutorial-steps { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .tutorial-steps li { display: flex; gap: 10px; font-size: 13px; color: #374151; line-height: 1.6; align-items: flex-start; }
+    .tutorial-steps .t-num { width: 22px; height: 22px; background: #4f8ef7; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .tutorial-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 7px 14px; background: #4f8ef7; color: #fff; border-radius: 8px; font-size: 12.5px; font-weight: 600; text-decoration: none; }
+    .tutorial-link:hover { background: #3b7de8; }
+    .tutorial-tip { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: #92400e; margin-top: 10px; line-height: 1.6; }
+    .tutorial-divider { border: none; border-top: 1px solid #f0f2f5; margin: 18px 0; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+
+    .form-group select,
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: #1a1a2e;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus { border-color: #4f8ef7; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+    .btn-primary {
+      flex: 1;
+      padding: 11px;
+      background: #4f8ef7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover { background: #3b7de8; }
+
+    .btn-secondary {
+      padding: 11px 20px;
+      background: #f5f7fa;
+      color: #374151;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-secondary:hover { background: #e5e7eb; }
+
+    .welcome-message {
+      text-align: center;
+      padding: 40px 20px;
+      color: #8892a4;
+    }
+
+    .welcome-message .emoji { font-size: 48px; margin-bottom: 12px; }
+    .welcome-message h3 { font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .welcome-message p { font-size: 13px; line-height: 1.6; }
+
+    /* ── Personal Tools Sidebar ── */
+    .personal-tools, #quickButtons { display: flex; flex-direction: column; gap: 4px; }
+    .personal-tool-btn {
+      width: 100%; text-align: left;
+      background: rgba(255,255,255,0.06); border: none;
+      color: rgba(255,255,255,0.75); padding: 9px 12px;
+      border-radius: 8px; font-size: 13px; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .personal-tool-btn:hover { background: rgba(79,142,247,0.25); color: #fff; }
+
+    /* ── Personal Modal Base ── */
+    .personal-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+    }
+    .personal-modal-overlay.active { display: flex; }
+    .personal-modal {
+      background: #fff; border-radius: 16px; width: 1100px;
+      max-width: 96vw; height: 88vh; max-height: 88vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden;
+    }
+    .personal-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px; border-bottom: 1px solid #f0f2f5; flex-shrink: 0;
+    }
+    .personal-modal-header h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+    .personal-modal-header p { font-size: 12.5px; color: #9ca3af; margin-top: 2px; }
+    .personal-modal-close {
+      background: none; border: none; font-size: 18px; color: #9ca3af;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    }
+    .personal-modal-close:hover { background: #f3f4f6; color: #374151; }
+    .personal-modal-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+    /* Shared buttons */
+    .tool-btn {
+      padding: 7px 14px; border-radius: 8px; font-size: 13px;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .tool-btn-primary { background: #4f8ef7; color: #fff; }
+    .tool-btn-primary:hover { background: #3b7de8; }
+    .tool-btn-danger { background: #fee2e2; color: #dc2626; }
+    .tool-btn-danger:hover { background: #fecaca; }
+    .tool-btn-ghost { background: #f3f4f6; color: #374151; }
+    .tool-btn-ghost:hover { background: #e5e7eb; }
+    .tool-btn-sm { padding: 5px 10px; font-size: 12px; }
+    .tool-btn-icon { padding: 5px 8px; background: none; border: none; font-size: 15px; cursor: pointer; color: #d1d5db; border-radius: 6px; }
+    .tool-btn-icon:hover { background: #f3f4f6; color: #374151; }
+
+    /* ── Notes ── */
+    .notes-list {
+      width: 260px; min-width: 260px; border-right: 1px solid #f0f2f5;
+      overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .notes-list-header {
+      padding: 10px 14px 8px; display: flex; justify-content: space-between;
+      align-items: center; flex-shrink: 0; border-bottom: 1px solid #f0f2f5;
+    }
+    .notes-list-header span { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
+    .note-item {
+      padding: 10px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.1s;
+    }
+    .note-item:hover { background: #f9fafb; }
+    .note-item.active { background: #eef2ff; border-left-color: #4f8ef7; }
+    .note-item-title { font-size: 13px; font-weight: 600; color: #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .note-item-date { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .notes-editor { flex: 1; display: flex; flex-direction: column; padding: 16px; gap: 10px; overflow: hidden; min-width: 0; }
+    .notes-title-input {
+      width: 100%; padding: 8px 12px; border: 1.5px solid #e5e7eb;
+      border-radius: 8px; font-size: 14px; font-weight: 600; outline: none; color: #1a1a2e;
+    }
+    .notes-title-input:focus { border-color: #4f8ef7; }
+    .notes-content-textarea {
+      flex: 1; width: 100%; padding: 14px; border: 1.5px solid #e5e7eb;
+      border-radius: 8px; font-size: 14.5px; color: #374151; line-height: 1.8;
+      resize: none; outline: none; font-family: inherit; min-height: 0;
+    }
+    .notes-content-textarea:focus { border-color: #4f8ef7; }
+    .notes-actions { display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+    .notes-empty-state { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #9ca3af; }
+
+    /* ── Todo ── */
+    .todo-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .todo-tabs { display: flex; border-bottom: 1px solid #f0f2f5; padding: 0 16px; flex-shrink: 0; }
+    .todo-tab { padding: 12px 16px; border: none; background: none; font-size: 13.5px; font-weight: 600; color: #8892a4; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .todo-tab.active { color: #4f8ef7; border-bottom-color: #4f8ef7; }
+    .todo-content { flex: 1; overflow-y: auto; padding: 16px; }
+    .todo-add-row { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+    .todo-add-row input, .todo-add-row select {
+      padding: 8px 10px; border: 1.5px solid #e5e7eb;
+      border-radius: 8px; font-size: 13px; outline: none; color: #374151; background: #fff;
+    }
+    .todo-add-row input:focus, .todo-add-row select:focus { border-color: #4f8ef7; }
+    .todo-add-row .todo-main-input { flex: 1; min-width: 0; }
+    .todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f9fafb; }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-check { width: 16px; height: 16px; cursor: pointer; margin-top: 2px; flex-shrink: 0; accent-color: #4f8ef7; }
+    .todo-text { flex: 1; font-size: 13px; color: #374151; line-height: 1.5; word-break: break-word; }
+    .todo-text.done { text-decoration: line-through; color: #9ca3af; }
+    .todo-priority { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 12px; flex-shrink: 0; }
+    .priority-high { background: #fee2e2; color: #dc2626; }
+    .priority-mid { background: #fef3c7; color: #d97706; }
+    .priority-low { background: #f0fdf4; color: #16a34a; }
+    .event-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f9fafb; align-items: flex-start; }
+    .event-item:last-child { border-bottom: none; }
+    .event-date-badge { background: #eef2ff; color: #4f46e5; border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; min-width: 52px; text-align: center; }
+    .event-info { flex: 1; }
+    .event-title { font-size: 13px; font-weight: 600; color: #1a1a2e; }
+    .event-note { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+    /* ── Contacts ── */
+    .contacts-sidebar { width: 260px; min-width: 260px; border-right: 1px solid #f0f2f5; display: flex; flex-direction: column; overflow: hidden; }
+    .contacts-search { padding: 10px 12px; border-bottom: 1px solid #f0f2f5; flex-shrink: 0; }
+    .contacts-search input { width: 100%; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; outline: none; color: #374151; }
+    .contacts-search input:focus { border-color: #4f8ef7; }
+    .contacts-list-header { padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .contacts-list-header span { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
+    .contacts-list { flex: 1; overflow-y: auto; }
+    .contact-item { padding: 10px 14px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.1s; }
+    .contact-item:hover { background: #f9fafb; }
+    .contact-item.active { background: #eef2ff; border-left-color: #4f8ef7; }
+    .contact-name { font-size: 13px; font-weight: 600; color: #1a1a2e; }
+    .contact-dept { font-size: 11.5px; color: #9ca3af; margin-top: 2px; }
+    .contacts-detail { flex: 1; display: flex; flex-direction: column; padding: 16px; overflow-y: auto; gap: 10px; }
+    .contacts-empty-state { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #9ca3af; }
+    .contacts-empty-state .empty-icon { font-size: 32px; }
+    .contact-form-row { display: flex; gap: 8px; }
+    .contact-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .contact-field label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; }
+    .contact-field input, .contact-field textarea {
+      padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+      font-size: 13px; outline: none; color: #374151; font-family: inherit; background: #fff;
+    }
+    .contact-field input:focus, .contact-field textarea:focus { border-color: #4f8ef7; }
+    .contact-field textarea { resize: none; height: 60px; }
+    .contact-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="icon">🤖</div>
+      <div>
+        <h1>SOP 助理</h1>
+        <p>AI Assistant</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">SOP 文件</div>
+    <div id="quickButtons">
+      <button class="personal-tool-btn" onclick="openFilesPicker()" id="filesPickerBtn">
+        📁 開啟文件庫 <span id="filesPickerCount" style="float:right;font-size:11px;font-weight:600;letter-spacing:0.3px;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.1);border-radius:9px;padding:1px 8px;line-height:1.5;">—</span>
+      </button>
+      <button class="personal-tool-btn" onclick="window.open('/review.html','_blank')" title="投稿待審與審核（需密碼）">
+        📋 SOP 審核台 <span id="pendingCount" style="float:right;display:none;font-size:11px;font-weight:600;color:#fcd34d;background:rgba(245,158,11,0.18);border-radius:9px;padding:1px 8px;line-height:1.5;">0</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">個人工具</div>
+    <div class="personal-tools">
+      <button class="personal-tool-btn" onclick="openNotes()">📝 個人筆記</button>
+      <button class="personal-tool-btn" onclick="openTodo()">✅ 行程 &amp; To-Do</button>
+      <button class="personal-tool-btn" onclick="openContacts()">📒 通訊錄</button>
+      <button class="personal-tool-btn" onclick="openLinks()">🔗 常用連結</button>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <a href="./sop-generator.html" target="_blank" rel="noopener noreferrer"
+       class="settings-btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;">
+      🛠️ SOP 文件生成器
+    </a>
+    <a href="./agent-optimizer.html" target="_blank" rel="noopener noreferrer"
+       class="settings-btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;">
+      ⚡ Agent-Ready 轉換器
+    </a>
+    <button class="settings-btn" onclick="refreshFiles()">
+      🔄 重新整理文件
+    </button>
+    <div class="sop-status" id="sopStatus">尚未載入文件</div>
+  </div>
+</aside>
+
+<!-- Chat Panel -->
+<main class="chat-panel">
+  <div class="chat-header">
+    <div class="chat-mode-toggle">
+      <button class="chat-mode-btn active" id="modeBtnSop" onclick="setChatMode('sop')">📄 SOP 助理</button>
+      <button class="chat-mode-btn" id="modeBtnFree" onclick="setChatMode('free')">💬 自由聊天</button>
+    </div>
+    <button id="clearBtn" onclick="clearConversation()" title="清除對話">🗑 清除對話</button>
+  </div>
+
+  <div class="chat-messages" id="chatMessages">
+    <div class="welcome-message">
+      <div class="emoji">💬</div>
+      <h3>有什麼工作上的問題嗎？</h3>
+      <p>我會根據部門的 SOP 文件來回答<br>點左側快捷按鈕或直接輸入問題</p>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <div class="context-bar" id="contextBar">
+      <span>💬</span>
+      <span id="contextBarText">對話進行中，AI 記得你之前問的問題</span>
+      <button class="context-bar-clear" onclick="clearConversation()" title="清除對話，重新開始">✕ 清除</button>
+    </div>
+    <div class="chat-input-wrapper">
+      <textarea
+        id="messageInput"
+        placeholder="輸入你的問題..."
+        rows="1"
+        onkeydown="handleKeyDown(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+</main>
+
+<!-- Doc Panel -->
+<aside class="doc-panel">
+  <div class="doc-panel-header">
+    <h3>📄 Document Context</h3>
+  </div>
+  <div class="doc-panel-body" id="docPanelBody">
+    <div class="doc-empty">
+      <div class="icon">📂</div>
+      <p>回答後這裡會顯示<br>引用的資料來源</p>
+    </div>
+  </div>
+</aside>
+
+
+<!-- Files Picker Modal -->
+<div class="personal-modal-overlay" id="filesPickerModal" onclick="if(event.target===this)closeFilesPicker()">
+  <div style="background:#fff;border-radius:14px;width:480px;max-width:94vw;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid #f0f2f5;flex-shrink:0;">
+      <div>
+        <h2 style="font-size:16px;font-weight:700;color:#1a1a2e;">📁 SOP 文件庫</h2>
+        <p style="font-size:12px;color:#9ca3af;margin-top:2px;">勾選要納入搜尋的文件，或點「編輯」直接修改內容（存回 Mac Mini）</p>
+      </div>
+      <button onclick="closeFilesPicker()" style="background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer;padding:4px 8px;border-radius:6px;">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:10px 12px;" id="filesPickerList">
+      <p style="font-size:13px;color:#9ca3af;padding:16px 0;text-align:center;">載入中...</p>
+    </div>
+  </div>
+</div>
+
+<!-- SOP Editor Modal -->
+<div class="personal-modal-overlay" id="sopEditorModal" onclick="if(event.target===this)closeSopEditor()">
+  <div style="background:#fff;border-radius:14px;width:880px;max-width:96vw;height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f0f2f5;flex-shrink:0;">
+      <div>
+        <h2 style="font-size:16px;font-weight:700;color:#1a1a2e;">✏️ 編輯 SOP 文件</h2>
+        <p style="font-size:12px;color:#9ca3af;margin-top:2px;" id="sopEditorFileName">—</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="sopEditorStatus" style="font-size:12px;"></span>
+        <button onclick="closeSopEditor()" style="background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer;padding:4px 8px;border-radius:6px;">✕</button>
+      </div>
+    </div>
+    <textarea id="sopEditorTextarea"
+              style="flex:1;width:100%;padding:20px 24px;border:none;resize:none;font-family:'SF Mono','Fira Code','Menlo',monospace;font-size:13px;line-height:1.75;color:#1a1a2e;outline:none;overflow-y:auto;background:#fafafa;"
+              placeholder="載入中..."></textarea>
+    <div style="padding:14px 20px;border-top:1px solid #f0f2f5;flex-shrink:0;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <input id="sopEditorName" placeholder="編輯者姓名"
+               style="width:130px;padding:7px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:12.5px;outline:none;">
+        <input id="sopEditorPw" type="password" placeholder="審核密碼（直接更新才需要）"
+               style="flex:1;min-width:180px;padding:7px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:12.5px;outline:none;">
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <p style="font-size:11px;color:#9ca3af;margin:0;">一般編輯會「送出待審」；持審核密碼可「直接更新」立即上架</p>
+        <div style="display:flex;gap:8px;">
+          <button onclick="closeSopEditor()"
+                  style="padding:8px 16px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;color:#6b7280;font-size:13px;cursor:pointer;">取消</button>
+          <button onclick="saveSopEditor('pending')" id="sopEditorSaveBtn"
+                  style="padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">📤 送出待審</button>
+          <button onclick="saveSopEditor('direct')" id="sopEditorDirectBtn"
+                  style="padding:8px 18px;border:1px solid #d97706;border-radius:8px;background:#fff7ed;color:#b45309;font-size:13px;font-weight:600;cursor:pointer;">⚡ 直接更新</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 刪除文件 modal -->
+<div class="personal-modal-overlay" id="sopDeleteModal" onclick="if(event.target===this)closeDeleteModal()">
+  <div style="background:#fff;border-radius:14px;width:460px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;">
+    <div style="padding:16px 20px;border-bottom:1px solid #f0f2f5;">
+      <h2 style="font-size:16px;font-weight:700;color:#dc2626;">🗑️ 刪除 SOP 文件</h2>
+      <p style="font-size:12px;color:#9ca3af;margin-top:2px;" id="sopDeleteFileName">—</p>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:12.5px;color:#6b7280;">刪除原因（必填）</label>
+        <textarea id="sopDeleteReason" rows="3" placeholder="例：流程已廢止／與某文件重複，改用…" style="width:100%;margin-top:4px;padding:9px 11px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;outline:none;resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input id="sopDeleteName" placeholder="操作者姓名（選填）" style="width:140px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:12.5px;outline:none;">
+        <input id="sopDeletePw" type="password" placeholder="審核密碼（直接刪除才需要）" style="flex:1;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:12.5px;outline:none;">
+      </div>
+      <p style="font-size:11px;color:#9ca3af;margin:0;">預設「申請刪除」會送審核者核可後才下架；持審核密碼可「直接刪除」立即下架。</p>
+      <span id="sopDeleteStatus" style="font-size:12.5px;"></span>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="closeDeleteModal()" style="padding:8px 16px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;color:#6b7280;font-size:13px;cursor:pointer;">取消</button>
+        <button onclick="doDeleteSop('request')" id="sopDeleteReqBtn" style="padding:8px 16px;border:none;border-radius:8px;background:#4f8ef7;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">📤 申請刪除</button>
+        <button onclick="doDeleteSop('direct')" id="sopDeleteDirectBtn" style="padding:8px 16px;border:1px solid #dc2626;border-radius:8px;background:#fff;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;">⚡ 直接刪除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Links Modal -->
+<div class="personal-modal-overlay" id="linksModal" onclick="if(event.target===this)closeLinks()">
+  <div style="background:#fff;border-radius:14px;width:560px;max-width:94vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid #f0f2f5;flex-shrink:0;">
+      <div>
+        <h2 style="font-size:16px;font-weight:700;color:#1a1a2e;">🔗 常用連結</h2>
+        <p style="font-size:12px;color:#9ca3af;margin-top:2px;">點擊連結在新分頁開啟</p>
+      </div>
+      <button onclick="closeLinks()" style="background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer;padding:4px 8px;border-radius:6px;">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:10px 14px;" id="linksList"></div>
+    <div style="padding:14px 16px;border-top:1px solid #f0f2f5;flex-shrink:0;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input id="linkNameInput" type="text" placeholder="名稱（例：週報）" style="flex:1;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;outline:none;" />
+        <input id="linkUrlInput" type="text" placeholder="網址（https://...）" style="flex:2;padding:8px 10px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;outline:none;" />
+      </div>
+      <button onclick="addLink()" style="width:100%;padding:8px;border:none;border-radius:8px;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">＋ 新增連結</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Notes Modal -->
+<div class="personal-modal-overlay" id="notesModal">
+  <div class="personal-modal">
+    <div class="personal-modal-header">
+      <div>
+        <h2>📝 個人筆記</h2>
+        <p>儲存在瀏覽器本機，不會上傳到任何伺服器</p>
+      </div>
+      <button class="personal-modal-close" onclick="closeNotes()">✕</button>
+    </div>
+    <div class="personal-modal-body">
+      <div class="notes-list">
+        <div class="notes-list-header">
+          <span>我的筆記</span>
+          <button class="tool-btn tool-btn-ghost tool-btn-sm" onclick="newNote()">＋ 新增</button>
+        </div>
+        <div id="notesList"></div>
+      </div>
+      <div class="notes-editor" id="notesEditor" style="display:none;">
+        <input type="text" class="notes-title-input" id="noteTitleInput" placeholder="筆記標題..." />
+        <textarea class="notes-content-textarea" id="noteContentInput" placeholder="輸入筆記內容（純文字）..."></textarea>
+        <div class="notes-actions">
+          <button class="tool-btn tool-btn-danger tool-btn-sm" onclick="deleteNote()">🗑 刪除</button>
+          <button class="tool-btn tool-btn-primary tool-btn-sm" onclick="saveNote()">💾 儲存</button>
+        </div>
+      </div>
+      <div class="notes-empty-state" id="notesEmptyState">
+        <div style="font-size:32px;">📝</div>
+        <p style="font-size:13px;color:#9ca3af;">點左側「＋ 新增」建立第一則筆記</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Todo & Schedule Modal -->
+<div class="personal-modal-overlay" id="todoModal">
+  <div class="personal-modal">
+    <div class="personal-modal-header">
+      <div>
+        <h2>✅ 行程 &amp; To-Do</h2>
+        <p>儲存在瀏覽器本機，不會上傳到任何伺服器</p>
+      </div>
+      <button class="personal-modal-close" onclick="closeTodo()">✕</button>
+    </div>
+    <div class="todo-body">
+      <div class="todo-tabs">
+        <button class="todo-tab active" id="todoTabBtn" onclick="switchTodoTab('todo')">✅ To-Do</button>
+        <button class="todo-tab" id="scheduleTabBtn" onclick="switchTodoTab('schedule')">📅 行程表</button>
+      </div>
+      <div class="todo-content" id="todoContent">
+        <div class="todo-add-row">
+          <input type="text" class="todo-main-input" id="todoInput" placeholder="新增待辦事項..." onkeydown="if(event.key==='Enter'&&!event.isComposing)addTodo()" />
+          <select id="todoPriority">
+            <option value="high">🔴 高優先</option>
+            <option value="mid" selected>🟡 中優先</option>
+            <option value="low">🟢 低優先</option>
+          </select>
+          <button class="tool-btn tool-btn-primary" onclick="addTodo()">＋ 新增</button>
+        </div>
+        <div id="todoList"></div>
+      </div>
+      <div class="todo-content" id="scheduleContent" style="display:none;">
+        <div class="todo-add-row">
+          <input type="date" id="eventDate" style="width:140px;flex:none;" />
+          <input type="text" id="eventTitle" class="todo-main-input" placeholder="行程名稱..." onkeydown="if(event.key==='Enter'&&!event.isComposing)addEvent()" />
+          <input type="text" id="eventNote" style="flex:1;min-width:0;" placeholder="備注（選填）" />
+          <button class="tool-btn tool-btn-primary" onclick="addEvent()">＋ 新增</button>
+        </div>
+        <div id="eventList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contacts Modal -->
+<div class="personal-modal-overlay" id="contactsModal">
+  <div class="personal-modal">
+    <div class="personal-modal-header">
+      <div>
+        <h2>📒 通訊錄</h2>
+        <p>儲存在瀏覽器本機，不會上傳到任何伺服器</p>
+      </div>
+      <button class="personal-modal-close" onclick="closeContacts()">✕</button>
+    </div>
+    <div class="personal-modal-body">
+      <div class="contacts-sidebar">
+        <div class="contacts-search">
+          <input type="text" id="contactSearch" placeholder="🔍 搜尋姓名或部門..." oninput="renderContactsList()" />
+        </div>
+        <div class="contacts-list-header">
+          <span>聯絡人</span>
+          <button class="tool-btn tool-btn-ghost tool-btn-sm" onclick="newContact()">＋ 新增</button>
+        </div>
+        <div class="contacts-list" id="contactsList"></div>
+      </div>
+      <div class="contacts-detail" id="contactsDetail">
+        <div class="contacts-empty-state" id="contactsEmptyState">
+          <div class="empty-icon">👤</div>
+          <p style="font-size:13px;">點左側聯絡人查看詳細資訊</p>
+          <p style="font-size:12px;color:#d1d5db;">或點「＋ 新增」建立第一筆聯絡人</p>
+        </div>
+        <div id="contactForm" style="display:none;">
+          <div class="contact-form-row">
+            <div class="contact-field">
+              <label>姓名</label>
+              <input type="text" id="cf-name" placeholder="姓名" />
+            </div>
+            <div class="contact-field">
+              <label>部門</label>
+              <input type="text" id="cf-dept" placeholder="所屬部門" />
+            </div>
+          </div>
+          <div class="contact-form-row">
+            <div class="contact-field">
+              <label>分機</label>
+              <input type="text" id="cf-ext" placeholder="分機號碼" />
+            </div>
+            <div class="contact-field">
+              <label>手機</label>
+              <input type="text" id="cf-phone" placeholder="手機號碼" />
+            </div>
+          </div>
+          <div class="contact-field">
+            <label>Email</label>
+            <input type="email" id="cf-email" placeholder="email@example.com" />
+          </div>
+          <div class="contact-field">
+            <label>備注</label>
+            <textarea id="cf-note" placeholder="其他說明（公司名稱、職稱、關係）..."></textarea>
+          </div>
+          <div class="contact-actions">
+            <button class="tool-btn tool-btn-danger tool-btn-sm" id="deleteContactBtn" onclick="deleteContact()" style="display:none;">🗑 刪除</button>
+            <button class="tool-btn tool-btn-primary tool-btn-sm" onclick="saveContact()">💾 儲存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ═══════════════════════════════════════
+  // CONFIG（硬編碼，不需要用戶填寫）
+  // ═══════════════════════════════════════
+  // （已移除：Google Drive API Key 與 FOLDER_ID — 全部改走本機 backend，不需外部金鑰）
+
+  const MODELS = {
+    gemini: ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite-preview', 'gemini-3-flash-preview'],
+    openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1']
+  };
+
+  // Configure marked to open links in new tab (marked v9 compatible)
+  try {
+    marked.use({
+      renderer: {
+        link(token) {
+          // marked v9: token is a plain URL string for GFM autolinks,
+          // or an object {href, title, text} for standard [text](url) links.
+          const href  = typeof token === 'string' ? token : (token.href  || '');
+          const title = typeof token === 'string' ? ''    : (token.title || '');
+          const inner = typeof token === 'string' ? token : (token.text  || href);
+          const rawText = inner.replace(/<[^>]+>/g, '').trim();
+          // Show URL as display text when the label is a generic placeholder or same as URL
+          const isGeneric = !rawText || rawText === href ||
+            /^(連結|link|here|點此|點擊|此處|查看|開啟|前往|點此開啟)$/i.test(rawText);
+          const displayText = isGeneric ? href : inner;
+          return '<a href="' + href + '" target="_blank" rel="noopener noreferrer"' +
+            (title ? ' title="' + title + '"' : '') + '>' + displayText + '</a>';
+        }
+      }
+    });
+  } catch(e) {
+    console.warn('marked renderer setup failed:', e);
+  }
+
+  // Convert Google Doc HTML export to plain text, preserving hyperlink URLs
+  function googleDocHtmlToText(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    // Unwrap Google's redirect URLs: https://www.google.com/url?q=REAL_URL&...
+    doc.querySelectorAll('a[href]').forEach(a => {
+      let href = a.getAttribute('href') || '';
+      // Strip Google redirect wrapper
+      try {
+        const u = new URL(href);
+        if ((u.hostname === 'www.google.com' || u.hostname === 'google.com') && u.pathname === '/url') {
+          href = u.searchParams.get('q') || href;
+        }
+      } catch(e) {}
+      const text = a.textContent.trim();
+      if (href.startsWith('http') && href !== text) {
+        a.textContent = text + '（' + href + '）';
+      } else if (href.startsWith('http')) {
+        a.textContent = href;
+      }
+    });
+    return (doc.body ? doc.body.innerText || doc.body.textContent : doc.documentElement.textContent).trim();
+  }
+
+  const SYSTEM_PROMPT = `你是部門的工作助理，除了回答 SOP 問題，也可以回答使用者個人工具中的內容（待辦清單、行事曆、筆記、通訊錄、常用連結）。
+回答一律使用繁體中文。
+
+以下是所有可參考的資料（SOP 文件 + 使用者個人資料）：
+
+{context}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+回答前必做的三個判斷步驟：
+
+【步驟 A — 文件篩選】
+每份文件開頭若有 --- 包起來的 YAML 區塊，讀取：
+- exclusion_tags：若使用者問題的關鍵字出現在此欄位 → 跳過這份文件
+- similar_docs：若有值 → 回答最後加「⚠️ 若您要處理的是 [X]，請參考《[similar_doc]》」
+
+【步驟 B — 定位相關段落】
+只找「與問題直接相關的段落」，其他段落（FAQ、維護資訊、適用對象、前置準備）一律忽略，除非使用者明確詢問。
+
+【步驟 C — 寫回答】
+根據問題類型套用以下格式（見範例），然後加上【資料來源】和【後續問題】。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+回答格式規則：
+
+規則 1：找不到答案 → 說「這個問題我目前的資料裡沒有，建議詢問主管」
+
+規則 2：問題模糊且答案因情境不同 → 先問一個最關鍵的問題（最多追問一次）
+
+規則 3：若文件有 URL → 必須單獨一行輸出：[點此開啟](URL)，不可省略
+
+規則 4：末尾必須附上來源和後續問題（格式完全一致）：
+【資料來源：文件名稱】
+【後續問題：問題一|問題二|問題三】
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+範例（照這個格式回答，不要偏離）：
+
+▌範例一：詢問流程步驟
+使用者問：「數存請款的流程是什麼？」
+
+正確回答：
+數存請款共 4 個步驟：
+1. 在【櫃台系統】→ 開啟「存款請款單」→ 確認單號產生
+2. 在【存款模組】→ 輸入戶號與金額 → 確認餘額充足
+3. 在【主管審核頁】→ 送出申請 → 確認狀態變為「審核中」
+4. 收到主管核准通知後 → 至【請款完成頁】列印收據
+
+【資料來源：數存請款流程】
+【後續問題：請款金額上限是多少？|主管不在時誰可以代理審核？|請款失敗怎麼辦？】
+
+錯誤回答（禁止這樣做）：
+❌ 把整份文件從頭貼到尾
+❌ 把「適用對象」「常見問題 FAQ」「維護資訊」一起貼出來
+❌ 每個步驟複製原文五六行
+
+▌範例二：單一查詢
+使用者問：「請款由誰審核？」
+
+正確回答：
+由直屬主管進行審核。
+
+【資料來源：數存請款流程】
+【後續問題：主管不在時誰代理？|審核需要多久？|審核拒絕怎麼處理？】
+
+▌範例三：文件有 URL
+使用者問：「請款系統連結在哪？」
+
+正確回答：
+請款系統連結如下：
+
+[點此開啟](https://example.com/payment)
+
+【資料來源：數存請款流程】
+【後續問題：系統登入需要什麼權限？|忘記密碼怎麼辦？|手機可以用嗎？】
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+  // ═══════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════
+  let sopFiles = [];
+  let activeFileIds = new Set();
+  let pinnedFileIds = new Set(JSON.parse(localStorage.getItem('sop_pinned_ids') || '[]'));
+  const SAVED_ACTIVE_IDS = JSON.parse(localStorage.getItem('sop_active_ids') || 'null');
+  let conversationHistory = [];
+  let freeChatHistory = [];
+  let chatMode = 'sop';
+  let isLoading = false;
+  let currentKeyIndex = 0;
+
+  const EMBED_CACHE_KEY = 'sop_embed_cache';
+  const EMBED_MODELS = ['gemini-embedding-001', 'gemini-embedding-002']; // try in order
+  const EMBED_DIMENSIONS = 768;
+  const MAX_CONTEXT_CHARS = 60000;
+  const SIMILARITY_THRESHOLD = 0.45;
+  const TOP_N_DOCS = 5;
+  let currentEmbedModel = localStorage.getItem('sop_embed_model') || null;
+
+  // ═══════════════════════════════════════
+  // SETTINGS
+  // ═══════════════════════════════════════
+  // （已移除：API Key / 模型設定 / Google OAuth 等設定 UI 與其 localStorage 存取 —
+  //   AI 全部走本機 backend，使用者不需也不該填這些。）
+
+  // updateSopStatus 保留為簡化版：狀態列文字由 loadSOPs() 設定，這裡僅在初始化時顯示佔位。
+  function updateSopStatus() {
+    const status = document.getElementById('sopStatus');
+    if (status && !status.textContent) status.textContent = '載入中...';
+  }
+
+  let currentEditFile = null;
+
+  // （已移除 Google OAuth / Drive 授權：文件編輯改存到本機 backend，見 saveSopEditor）
+
+  // 點來源 → 用既有 SOP 檢視/編輯視窗打開該文件內容（對外 tunnel 只能看不能存）
+  function openDocViewer(file) {
+    if (!file) return;
+    const idx = sopFiles.findIndex(f => f.id === file.id);
+    if (idx >= 0) openSopEditor(idx);
+  }
+
+  function openSopEditor(idx) {
+    const file = sopFiles[idx];
+    if (!file) return;
+    currentEditFile = file;
+    closeFilesPicker();
+    document.getElementById('sopEditorFileName').textContent = file.name;
+    document.getElementById('sopEditorTextarea').value = file.content || '';
+    document.getElementById('sopEditorStatus').textContent = '';
+    document.getElementById('sopEditorSaveBtn').disabled = false;
+    document.getElementById('sopEditorModal').classList.add('active');
+  }
+
+  function closeSopEditor() {
+    document.getElementById('sopEditorModal').classList.remove('active');
+    currentEditFile = null;
+  }
+
+  // ── 刪除文件（比照編輯治理：申請刪除→待審 / 持密碼直接刪除）──
+  let currentDeleteIdx = null;
+  function openDeleteModal(i) {
+    const f = sopFiles[i]; if (!f) return;
+    currentDeleteIdx = i;
+    document.getElementById('sopDeleteFileName').textContent = f.name;
+    document.getElementById('sopDeleteReason').value = '';
+    document.getElementById('sopDeletePw').value = '';
+    document.getElementById('sopDeleteName').value = '';
+    document.getElementById('sopDeleteStatus').textContent = '';
+    document.getElementById('sopDeleteModal').classList.add('active');
+  }
+  function closeDeleteModal() {
+    document.getElementById('sopDeleteModal').classList.remove('active');
+    currentDeleteIdx = null;
+  }
+  async function doDeleteSop(mode) {
+    const f = sopFiles[currentDeleteIdx]; if (!f) return;
+    const statusEl = document.getElementById('sopDeleteStatus');
+    if (location.hostname === '<PUBLIC_HOSTNAME>') { statusEl.textContent = '⚠ 刪除僅限公司內網'; statusEl.style.color = '#ef4444'; return; }
+    const reason = document.getElementById('sopDeleteReason').value.trim();
+    if (!reason) { statusEl.textContent = '⚠ 請填寫刪除原因'; statusEl.style.color = '#ef4444'; return; }
+    const submitter = (document.getElementById('sopDeleteName').value || '').trim() || '檔案庫操作';
+    const filename = f.originalName || (f.id + '.md');
+    const reqBtn = document.getElementById('sopDeleteReqBtn'), dirBtn = document.getElementById('sopDeleteDirectBtn');
+    try {
+      if (mode === 'direct') {
+        const pw = document.getElementById('sopDeletePw').value;
+        if (!pw) { statusEl.textContent = '⚠ 直接刪除需輸入審核密碼'; statusEl.style.color = '#ef4444'; return; }
+        if (!confirm(`確定要「直接刪除」文件「${f.name}」嗎？\n會立即從知識庫移除、無法復原。`)) return;
+        statusEl.textContent = '刪除中...'; statusEl.style.color = '#9ca3af'; reqBtn.disabled = true; dirBtn.disabled = true;
+        const r = await fetch('/sop-files/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Review-Password': pw }, body: JSON.stringify({ filename, editor: submitter, reason }) });
+        if (r.status === 403) { statusEl.textContent = '❌ 審核密碼錯誤，無法直接刪除（可改用申請刪除）'; statusEl.style.color = '#ef4444'; return; }
+        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
+        statusEl.textContent = '✓ 已直接刪除並更新索引'; statusEl.style.color = '#22c55e';
+      } else {
+        if (!confirm(`確定要送出「申請刪除」文件「${f.name}」嗎？\n將由審核者核可後才會下架。`)) return;
+        statusEl.textContent = '送出中...'; statusEl.style.color = '#9ca3af'; reqBtn.disabled = true; dirBtn.disabled = true;
+        const r = await fetch('/sop-pending', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: f.name, md: '', op: 'delete', submitter, reason, source: 'file-library' }) });
+        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || ('HTTP ' + r.status)); }
+        const d = await r.json();
+        statusEl.textContent = `✓ 已送出刪除申請（#${d.id}），待審核者核可後下架`; statusEl.style.color = '#22c55e';
+      }
+      setTimeout(() => { closeDeleteModal(); loadSOPs(); }, 1500);
+    } catch (e) {
+      statusEl.textContent = '❌ ' + e.message; statusEl.style.color = '#ef4444';
+    } finally {
+      reqBtn.disabled = false; dirBtn.disabled = false;
+    }
+  }
+
+  // mode='pending'（預設，編輯送待審 op=modify）｜'direct'（持審核密碼直接更新上架）
+  async function saveSopEditor(mode) {
+    if (!currentEditFile) return;
+    mode = mode || 'pending';
+    const content = document.getElementById('sopEditorTextarea').value;
+    const statusEl = document.getElementById('sopEditorStatus');
+    const saveBtn = document.getElementById('sopEditorSaveBtn');
+    const directBtn = document.getElementById('sopEditorDirectBtn');
+
+    // 透過對外 tunnel 開啟時，寫入會被後端擋下（限內網）→ 先提示
+    if (location.hostname === '<PUBLIC_HOSTNAME>') {
+      statusEl.textContent = '⚠ 編輯/儲存文件僅限公司內網，請連公司網路後再儲存。';
+      statusEl.style.color = '#ef4444';
+      return;
+    }
+    const editor = (document.getElementById('sopEditorName').value || '').trim() || '編輯者';
+    statusEl.textContent = '處理中...'; statusEl.style.color = '#9ca3af';
+    saveBtn.disabled = true; directBtn.disabled = true;
+
+    try {
+      if (mode === 'direct') {
+        // 直接更新：需審核密碼，走 /sop-files（後端驗密碼後寫檔+git commit+索引）
+        const pw = document.getElementById('sopEditorPw').value;
+        if (!pw) { statusEl.textContent = '⚠ 直接更新需輸入審核密碼'; statusEl.style.color = '#ef4444'; return; }
+        if (!confirm('確定要「直接更新」嗎？會跳過待審、立即覆蓋上架並被 AI 檢索。')) { statusEl.textContent=''; saveBtn.disabled=false; directBtn.disabled=false; return; }
+        const filename = currentEditFile.originalName || (currentEditFile.id + '.md');
+        const resp = await fetch('/sop-files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Review-Password': pw },
+          body: JSON.stringify({ filename, content, editor }),
+        });
+        if (resp.status === 403) { statusEl.textContent = '❌ 審核密碼錯誤，無法直接更新（可改送出待審）'; statusEl.style.color = '#ef4444'; return; }
+        if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `HTTP ${resp.status}`); }
+        // 直接更新成功 → 同步記憶體內容
+        currentEditFile.content = content;
+        const cached = sopFiles.find(f => f.id === currentEditFile.id);
+        if (cached) cached.content = content;
+        statusEl.textContent = '✓ 已直接更新並重新索引（立即生效）';
+        statusEl.style.color = '#22c55e';
+        renderFilesPickerList();
+      } else {
+        // 預設：送出待審（op=modify），審核台會以新舊對照供審核
+        const resp = await fetch('/sop-pending', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentEditFile.name, md: content, submitter: editor, type: 'SOP', op: 'modify', source: 'editor' }),
+        });
+        if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `HTTP ${resp.status}`); }
+        const d = await resp.json();
+        const badge = d.precheck && d.precheck.badge ? d.precheck.badge : '';
+        statusEl.textContent = `✓ 已送出待審（#${d.id} ${badge}），待審核者核可後更新`;
+        statusEl.style.color = '#22c55e';
+      }
+      setTimeout(() => { if (statusEl.textContent.startsWith('✓')) statusEl.textContent = ''; }, 4500);
+    } catch(e) {
+      statusEl.textContent = `❌ ${e.message}`;
+      statusEl.style.color = '#ef4444';
+    } finally {
+      saveBtn.disabled = false; directBtn.disabled = false;
+    }
+  }
+
+  function refreshFiles() {
+    localStorage.removeItem('sop_file_cache_v1');
+    localStorage.removeItem(EMBED_CACHE_KEY); // Bug 4 fix: also clear embed cache
+    const statusEl = document.getElementById('sopStatus');
+    if (statusEl) { statusEl.textContent = '快取已清除，重新載入中...'; statusEl.className = 'sop-status'; }
+    loadSOPs();
+  }
+
+  function cleanupOrphanedChunks() {
+    const cache = readEmbedCache();
+    const validIds = new Set(sopFiles.map(f => f.id));
+    let removed = 0;
+    for (const key of Object.keys(cache)) {
+      if (!validIds.has(cache[key].docId)) { delete cache[key]; removed++; }
+    }
+    if (removed > 0) { writeEmbedCache(cache); console.log(`清除 ${removed} 個孤兒 chunks`); }
+  }
+
+  // ═══════════════════════════════════════
+  // SOP 文件（改讀 Mac Mini 本地 backend GET /sop-files，不再經過 Google Drive）
+  // ═══════════════════════════════════════
+  async function loadSOPs() {
+    const statusEl = document.getElementById('sopStatus');
+
+    try {
+      statusEl.textContent = '載入文件中...';
+      statusEl.className = 'sop-status';
+
+      const listRes = await fetch('/sop-files');
+      if (!listRes.ok) {
+        const err = await listRes.json().catch(() => ({}));
+        throw new Error(err.error || `無法存取 backend（HTTP ${listRes.status}）`);
+      }
+
+      const listData = await listRes.json();
+      const files = listData.files || [];
+
+      if (files.length === 0) {
+        statusEl.textContent = '目前沒有 SOP 文件';
+        statusEl.className = 'sop-status';
+        document.getElementById('filesPickerList').innerHTML = '<p style="font-size:13px;color:#9ca3af;padding:16px 0;text-align:center;">目前沒有 SOP 文件</p>';
+        sopFiles = [];
+        activeFileIds = new Set();
+        renderFilesPickerList();
+        updateActiveStatus();
+        return;
+      }
+
+      // backend 回傳 { id（去掉 .md）, name（含 .md）, content }；顯示名稱去掉副檔名
+      sopFiles = files.map(f => ({
+        id: f.id,
+        name: f.name.replace(/\.md$/i, ''),
+        originalName: f.name,
+        content: f.content,
+      }));
+
+      // Restore active selection from previous session, or default to all
+      if (SAVED_ACTIVE_IDS && Array.isArray(SAVED_ACTIVE_IDS)) {
+        const validSaved = SAVED_ACTIVE_IDS.filter(id => sopFiles.some(f => f.id === id));
+        activeFileIds = new Set(validSaved.length > 0 ? validSaved : sopFiles.map(f => f.id));
+      } else {
+        activeFileIds = new Set(sopFiles.map(f => f.id));
+      }
+      saveActiveIds();
+      renderFilesPickerList();
+      updateActiveStatus();
+      statusEl.textContent = `✓ 已載入 ${sopFiles.length} 份文件（語意索引由 Mac Mini 本地處理）`;
+      statusEl.className = 'sop-status loaded';
+      // 語意索引（embedding / 檢索）已搬到 backend，前端不再需要 embedAllDocs()
+
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = '⚠ 文件載入失敗（backend 未啟動？）';
+      statusEl.className = 'sop-status error';
+      document.getElementById('filesPickerList').innerHTML = `<p style="font-size:12px;color:#f87171;padding:12px 0;text-align:center;">載入失敗：${e.message}</p>`;
+    }
+  }
+
+  // 每 25 秒輪詢 /sop-files，偵測新增/刪除/改名 → 自動更新清單（不必手動重整）。
+  // 只在「檔案集合有變」時才更新，避免干擾使用者：保留既有勾選，新檔預設勾選。
+  async function pollSopFiles() {
+    try {
+      const res = await fetch('/sop-files');
+      if (!res.ok) return;
+      const { files = [] } = await res.json();
+      const newKeys = files.map(f => f.id).sort().join('|');
+      const curKeys = sopFiles.map(f => f.id).sort().join('|');
+      if (newKeys === curKeys) return; // 沒變化 → 不動
+
+      const prevActive = new Set(activeFileIds);
+      const prevIds = new Set(sopFiles.map(f => f.id));
+      const hadFiles = sopFiles.length > 0;
+      sopFiles = files.map(f => ({ id: f.id, name: f.name.replace(/\.md$/i, ''), originalName: f.name, content: f.content }));
+      // 既有檔案維持原勾選狀態；新檔案（不在 prevIds）預設勾選
+      activeFileIds = new Set(sopFiles.filter(f => !hadFiles || prevActive.has(f.id) || !prevIds.has(f.id)).map(f => f.id));
+      saveActiveIds();
+      renderFilesPickerList();
+      updateActiveStatus();
+      const statusEl = document.getElementById('sopStatus');
+      if (statusEl) {
+        statusEl.textContent = `✓ 已載入 ${sopFiles.length} 份文件（清單自動更新）`;
+        statusEl.className = 'sop-status loaded';
+      }
+    } catch (e) { /* 輪詢失敗安靜略過，下次再試 */ }
+  }
+
+  function updateContextBar() {
+    const bar = document.getElementById('contextBar');
+    const text = document.getElementById('contextBarText');
+    const turns = Math.floor(conversationHistory.length / 2);
+    if (turns > 0) {
+      text.textContent = `對話進行中（${turns} 則）— AI 記得你之前的問題，可直接追問`;
+      bar.classList.add('visible');
+    } else {
+      bar.classList.remove('visible');
+    }
+  }
+
+  function clearConversation() {
+    if (chatMode === 'free') {
+      freeChatHistory = [];
+    } else {
+      conversationHistory = [];
+    }
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.innerHTML = chatMode === 'free'
+      ? `<div class="welcome-message"><div class="emoji">💬</div><h3>自由聊天模式</h3><p>不受 SOP 限制，可以問任何問題</p></div>`
+      : `<div class="welcome-message"><div class="emoji">💬</div><h3>有什麼工作上的問題嗎？</h3><p>我會根據部門的 SOP 文件來回答<br>點左側快捷按鈕或直接輸入問題</p></div>`;
+    document.getElementById('docPanelBody').innerHTML = `
+      <div class="doc-empty">
+        <div class="icon">📂</div>
+        <p>回答後這裡會顯示<br>引用的資料來源</p>
+      </div>`;
+    updateContextBar();
+  }
+
+  function setChatMode(mode) {
+    chatMode = mode;
+    document.getElementById('modeBtnSop').classList.toggle('active', mode === 'sop');
+    document.getElementById('modeBtnFree').classList.toggle('active', mode === 'free');
+    const input = document.getElementById('messageInput');
+    input.placeholder = mode === 'free' ? '輸入任何問題...' : '輸入你的問題...';
+    clearConversation();
+  }
+
+  function buildPersonalContext() {
+    const sections = [];
+
+    // 待辦清單
+    const todos = JSON.parse(localStorage.getItem('personal_todos') || '[]');
+    if (todos.length > 0) {
+      const lines = todos.map(t => `- [${t.done ? '已完成' : '未完成'}] ${t.text}`);
+      sections.push(`=== 個人資料：待辦清單 ===\n${lines.join('\n')}`);
+    }
+
+    // 行事曆（依日期排序）
+    const events = JSON.parse(localStorage.getItem('personal_events') || '[]');
+    if (events.length > 0) {
+      const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
+      const lines = sorted.map(e => {
+        const d = new Date(e.date);
+        const weekdays = ['日','一','二','三','四','五','六'];
+        const label = `${e.date}（週${weekdays[d.getDay()]}）`;
+        return `- ${label}：${e.title}${e.note ? `（${e.note}）` : ''}`;
+      });
+      sections.push(`=== 個人資料：行事曆 ===\n${lines.join('\n')}`);
+    }
+
+    // 筆記
+    const notes = JSON.parse(localStorage.getItem('personal_notes') || '[]');
+    if (notes.length > 0) {
+      const parts = notes.map(n => `--- 筆記：${n.title} ---\n${n.content}`);
+      sections.push(`=== 個人資料：筆記 ===\n${parts.join('\n\n')}`);
+    }
+
+    // 通訊錄
+    const contacts = JSON.parse(localStorage.getItem('personal_contacts') || '[]');
+    if (contacts.length > 0) {
+      const lines = contacts.map(c => {
+        const parts = [c.name];
+        if (c.dept) parts.push(c.dept);
+        if (c.phone) parts.push(`電話：${c.phone}`);
+        if (c.email) parts.push(`Email：${c.email}`);
+        if (c.note) parts.push(`備注：${c.note}`);
+        return `- ${parts.join(' | ')}`;
+      });
+      sections.push(`=== 個人資料：通訊錄 ===\n${lines.join('\n')}`);
+    }
+
+    // 常用連結
+    const links = JSON.parse(localStorage.getItem('personal_links') || '[]');
+    if (links.length > 0) {
+      const lines = links.map(l => `- ${l.name}：${l.url}`);
+      sections.push(`=== 個人資料：常用連結 ===\n${lines.join('\n')}`);
+    }
+
+    return sections.join('\n\n');
+  }
+
+  // ═══════════════════════════════════════
+  // EMBEDDING & RETRIEVAL
+  // ═══════════════════════════════════════
+
+  function readEmbedCache() {
+    try { return JSON.parse(localStorage.getItem(EMBED_CACHE_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function writeEmbedCache(cache) {
+    try {
+      localStorage.setItem(EMBED_CACHE_KEY, JSON.stringify(cache));
+    } catch(e) {
+      console.error('localStorage write failed:', e);
+      if (e.name === 'QuotaExceededError' || /quota/i.test(e.message)) {
+        const statusEl = document.getElementById('sopStatus');
+        if (statusEl) {
+          statusEl.textContent = '⚠ 索引快取已滿，請點「重新載入文件」清理';
+          statusEl.className = 'sop-status error';
+        }
+      }
+    }
+  }
+
+  function savePinnedIds() {
+    localStorage.setItem('sop_pinned_ids', JSON.stringify([...pinnedFileIds]));
+  }
+
+  function togglePin(fileId) {
+    if (pinnedFileIds.has(fileId)) pinnedFileIds.delete(fileId);
+    else pinnedFileIds.add(fileId);
+    savePinnedIds();
+    renderFilesPickerList();
+  }
+
+  function contentSignature(content) {
+    return content.length + '|' + content.slice(0, 20) + '|' + content.slice(-20);
+  }
+
+  function isDocIndexed(file) {
+    // 索引由 backend 自動維護（sop-files/ 內的文件啟動即索引），前端視為已索引
+    return true;
+  }
+
+  const IMG_REGEX = /!\[([^\]]*)\]\(([^)]+)\)/g;
+
+  function extractChunkImages(text) {
+    const images = [];
+    let m;
+    IMG_REGEX.lastIndex = 0;
+    while ((m = IMG_REGEX.exec(text)) !== null) {
+      images.push({ alt: m[1], url: m[2] });
+    }
+    return images;
+  }
+
+  function stripImages(text) {
+    return text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function chunkifyDoc(content, docId, docName) {
+    const chunks = [];
+    const lines = content.split('\n');
+    let currentHeading = docName;
+    let currentLines = [];
+
+    const flush = () => {
+      const text = currentLines.join('\n').trim();
+      if (text.length > 3) {
+        const images = extractChunkImages(text);
+        const cleanContent = stripImages(text);
+        chunks.push({ id: `${docId}::${chunks.length}`, docId, docName, heading: currentHeading, content: cleanContent, images });
+      }
+      currentLines = [];
+    };
+
+    for (const line of lines) {
+      if (/^#{1,3} /.test(line) && currentLines.length > 0) {
+        flush();
+        currentHeading = line.replace(/^#+\s+/, '');
+      }
+      currentLines.push(line);
+    }
+    flush();
+
+    if (chunks.length === 0 && content.trim().length > 0) {
+      chunks.push({ id: `${docId}::0`, docId, docName, heading: docName, content: content.trim() });
+    }
+    return chunks;
+  }
+
+  function cosineSimilarity(a, b) {
+    let dot = 0, normA = 0, normB = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i];
+    }
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  let lastEmbedError = null;
+
+  // 已停用：embedding 由本機 backend（Ollama bge-m3）負責，前端不再呼叫任何外部 API。
+  async function embedText() {
+    throw new Error('前端 embedding 已停用，請使用本機 backend /ask');
+  }
+
+  // 語意索引（embedding）已移到 Mac Mini backend，前端不再自行 embed。保留為 no-op，
+  // 讓檔案勾選 UI（toggleFile / toggleAllFiles）仍可呼叫而不觸發任何外部 API。
+  async function ensureDocEmbedded(file) { /* backend 負責索引 */ }
+
+  // 語意索引改由 backend 在 sop-files/ 變更時自動建立，前端不再批次 embed。
+  // 保留函式名稱（多處呼叫），只更新狀態列顯示。
+  async function embedAllDocs() {
+    const statusEl = document.getElementById('sopStatus');
+    if (statusEl) {
+      statusEl.textContent = `✓ 已載入 ${sopFiles.length} 份文件（語意索引由 Mac Mini 本地處理）`;
+      statusEl.className = 'sop-status loaded';
+    }
+    renderFilesPickerList();
+  }
+
+  async function reindexFile(fileId) {
+    const file = sopFiles.find(f => f.id === fileId);
+    if (!file) return;
+    const cache = readEmbedCache();
+    for (const key of Object.keys(cache)) {
+      if (key.startsWith(file.id + '::')) delete cache[key];
+    }
+    writeEmbedCache(cache);
+    renderFilesPickerList();
+    await ensureDocEmbedded(file);
+    renderFilesPickerList();
+  }
+
+  // Stores the last retrieval result so UI can display it
+  let lastRetrievalInfo = null;
+  let lastQueryImages = [];
+
+
+  // ═══════════════════════════════════════
+  // AI CALLS
+  // ═══════════════════════════════════════
+  function isRetryableError(msg) {
+    return /429|503|quota|RESOURCE_EXHAUSTED|rate.?limit|too many|overload|capacity|unavailable|high demand/i.test(msg);
+  }
+
+  // 每個瀏覽器一個穩定的 session id，讓 backend 分開記錄各自的對話歷史
+  function getSessionId() {
+    let sid = localStorage.getItem('sop_session_id');
+    if (!sid) {
+      sid = 'web-' + (crypto.randomUUID ? crypto.randomUUID()
+        : Date.now() + '-' + Math.random().toString(16).slice(2));
+      localStorage.setItem('sop_session_id', sid);
+    }
+    return sid;
+  }
+
+  // SOP 問答：改打 Mac Mini 本地 backend /ask（RAG + 對話模型都在 backend）。
+  // 個人工具資料（待辦/行事曆/筆記…）仍只存在瀏覽器 localStorage，這裡按 request 帶過去，
+  // backend 不會落地儲存，也不影響 LINE bot。
+  // SOP 問答（串流版）：打 /ask/stream，逐 token 透過 onToken(累積文字) 回呼，讓「首字」在 ~8s 就出現。
+  // 回傳完整答案字串；sources/images 存到 lastQueryInfo / lastQueryImages。
+  async function callAI(userMessage, onToken) {
+    const personalContext = buildPersonalContext();
+    const docIds = [...activeFileIds]; // 勾選文件範圍（已存 localStorage）
+    const res = await fetch('/ask/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: getSessionId(),
+        message: userMessage,
+        personalContext: personalContext || undefined,
+        docIds,
+      }),
+    });
+    if (!res.ok || !res.body) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `backend 錯誤（HTTP ${res.status}）`);
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', full = '', meta = { sources: [], images: [] };
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0) {
+        const raw = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const line = raw.replace(/^data:\s?/, '').trim();
+        if (!line) continue;
+        let j; try { j = JSON.parse(line); } catch (e) { continue; }
+        if (j.type === 'meta') meta = j;
+        else if (j.type === 'token') { full += j.t; if (onToken) onToken(full); }
+        else if (j.type === 'error') throw new Error(j.error);
+      }
+    }
+    lastQueryImages = meta.images || [];
+    lastRetrievalInfo = {
+      mode: (meta.sources && meta.sources.length) ? 'semantic' : 'fallback',
+      gateVia: meta.gateVia || null,
+      // 用後端傳回的真實相關分數（rerank 主訊號 + cosine 備援），不再一律 100%
+      scores: (meta.scores && meta.scores.length)
+        ? meta.scores.map(s => ({ name: s.name.replace(/\.md$/i, ''), score: s.score, cos: s.cos, selected: true }))
+        : (meta.sources || []).map(n => ({ name: n.replace(/\.md$/i, ''), score: null, cos: null, selected: true })),
+    };
+    return full || '抱歉，無法取得回答。';
+  }
+
+  // 自由聊天：不走 RAG，直接打 backend /chat（本地對話模型）
+  async function callFreeChat(userMessage, history) {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userMessage, history }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `backend 錯誤（HTTP ${res.status}）`);
+    }
+    const data = await res.json();
+    return data.answer || '抱歉，無法取得回答。';
+  }
+
+  // 已停用：對話一律走本機 backend（callAI → /ask/stream、callFreeChat → /chat）。
+  // 保留函式名以免任何殘留引用 ReferenceError，但不再呼叫任何外部 API。
+  async function callGemini() { throw new Error('外部 API 已停用，請使用本機 backend'); }
+  async function callOpenAI() { throw new Error('外部 API 已停用，請使用本機 backend'); }
+
+  // ═══════════════════════════════════════
+  // PARSE RESPONSE
+  // ═══════════════════════════════════════
+  function parseResponse(text) {
+    const sourceMatch = text.match(/【資料來源：(.+?)】/);
+    const followupMatch = text.match(/【後續問題：(.+?)】/);
+
+    const source = sourceMatch ? sourceMatch[1].trim() : null;
+    const followups = followupMatch
+      ? followupMatch[1].split('|').map(q => q.trim()).filter(Boolean)
+      : [];
+
+    let answer = text
+      .replace(/【資料來源：.+?】/g, '')
+      .replace(/【後續問題：.+?】/g, '')
+      .trim();
+
+    return { answer, source, followups };
+  }
+
+  // Inject missing URLs from source file.
+  // For single-URL files: always inject. For multi-URL files: match by answer content keywords.
+  function injectMissingUrls(answer, sourceName, userQuestion) {
+    const sourceFiles = getSourceFile(sourceName);
+    if (!sourceFiles || sourceFiles.length === 0) return answer;
+
+    const urlRegex = /https?:\/\/[^\s)）\]"'<>]+/g;
+
+    // Collect all URLs across source files
+    const allUrls = new Set();
+    for (const file of sourceFiles) {
+      (file.content || '').match(urlRegex)?.forEach(u => allUrls.add(u.replace(/[.,;:!?]+$/, '')));
+    }
+    if (allUrls.size === 0) return answer;
+
+    // If only 1 URL, inject directly (no ambiguity)
+    if (allUrls.size === 1) {
+      const [url] = allUrls;
+      if (answer.includes(url)) return answer;
+      return answer + `\n\n**相關連結：**\n\n<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    }
+
+    // Section-based URL matching:
+    // Parse document into sections split by ## / ### headers.
+    // Score each section's HEADER (short, specific) against question+answer tokens.
+    // "OO系統 使用說明" header uniquely matches "OO系統是啥？" far better than long context windows.
+    const tokenRegex = /[a-z0-9]+|[\u4e00-\u9fff]+/g;
+    const questionTokens = new Set((userQuestion || '').toLowerCase().match(tokenRegex) || []);
+    const answerTokens   = new Set(answer.toLowerCase().match(tokenRegex) || []);
+
+    // Build sections: { header: string, urls: string[] }
+    const sections = [];
+    for (const file of sourceFiles) {
+      const lines = (file.content || '').split('\n');
+      let currentHeader = '';
+      let currentUrls = [];
+      for (const line of lines) {
+        if (/^#{1,4}\s/.test(line)) {
+          if (currentUrls.length) sections.push({ header: currentHeader, urls: currentUrls });
+          currentHeader = line.replace(/^#+\s*/, '').toLowerCase();
+          currentUrls = [];
+        }
+        const found = line.match(urlRegex);
+        if (found) found.forEach(u => currentUrls.push(u.replace(/[.,;:!?]+$/, '')));
+      }
+      if (currentUrls.length) sections.push({ header: currentHeader, urls: currentUrls });
+    }
+    // Score each section header: question token hit = length×5, answer token hit = length×1
+    const scored = sections
+      .map(sec => {
+        const headerTokens = sec.header.match(tokenRegex) || [];
+        const score = headerTokens.reduce((sum, t) => {
+          return sum + (questionTokens.has(t) ? t.length * 5 : 0)
+                     + (answerTokens.has(t)   ? t.length     : 0);
+        }, 0);
+        return { score, urls: sec.urls.filter(u => !answer.includes(u)) };
+      })
+      .filter(s => s.urls.length > 0);
+
+    if (scored.length === 0) return answer;
+    const maxScore = Math.max(...scored.map(r => r.score));
+    if (maxScore === 0) return answer;
+
+    const toInject = [...new Set(scored.filter(r => r.score === maxScore).flatMap(r => r.urls))];
+    if (toInject.length === 0) return answer;
+    const linkHtml = toInject.map(u =>
+      `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`
+    ).join('<br>');
+    return answer + '\n\n**相關連結：**\n\n' + linkHtml;
+  }
+
+  function normalize(s) {
+    return s.toLowerCase().replace(/[\s\-_\.]/g, '');
+  }
+
+  function getSourceFile(sourceName) {
+    if (!sourceName || sourceName === '無') return null;
+    const names = sourceName.split('、');
+    const results = [];
+    for (const name of names) {
+      const n = normalize(name.trim());
+      const file = sopFiles.find(f => {
+        const fn = normalize(f.name);
+        return fn.includes(n) || n.includes(fn);
+      });
+      if (file) results.push(file);
+    }
+    return results.length > 0 ? results : null;
+  }
+
+  function getExcerpt(file, userMessage) {
+    if (!file || !file.content) return '';
+    const lines = file.content.split('\n').filter(l => l.trim());
+    const query = userMessage.toLowerCase();
+    let bestLine = 0;
+    let bestScore = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const words = query.split(/\s+/);
+      const score = words.filter(w => lines[i].toLowerCase().includes(w)).length;
+      if (score > bestScore) { bestScore = score; bestLine = i; }
+    }
+
+    const start = Math.max(0, bestLine - 1);
+    return lines.slice(start, start + 6).join('\n').slice(0, 300);
+  }
+
+  // ═══════════════════════════════════════
+  // UI
+  // ═══════════════════════════════════════
+  // 串流期間用的暫時 bot 泡泡（done 後會被移除，改用正式 appendMessage）
+  function createStreamingBubble() {
+    const container = document.getElementById('chatMessages');
+    const welcome = container.querySelector('.welcome-message');
+    if (welcome) welcome.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'message bot';
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = '🤖';
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+    contentDiv.appendChild(bubble);
+    wrap.appendChild(avatar);
+    wrap.appendChild(contentDiv);
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
+    return bubble;
+  }
+
+  function appendMessage(role, content, source, followups, userMessage) {
+    const container = document.getElementById('chatMessages');
+
+    // Remove welcome message
+    const welcome = container.querySelector('.welcome-message');
+    if (welcome) welcome.remove();
+
+    const wrap = document.createElement('div');
+    wrap.className = `message ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+
+    if (role === 'user') {
+      bubble.textContent = content;
+    } else {
+      bubble.innerHTML = marked.parse(content);
+    }
+
+    contentDiv.appendChild(bubble);
+
+    // Retrieval mode badge (only for SOP mode bot replies)
+    if (role === 'bot' && chatMode === 'sop' && lastRetrievalInfo) {
+      const modeBadge = document.createElement('div');
+      const info = lastRetrievalInfo;
+      const isSemantic = info.mode === 'semantic';
+      modeBadge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;width:fit-content;cursor:pointer;' +
+        (isSemantic
+          ? 'background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;'
+          : 'background:#fef3c7;border:1px solid #fde68a;color:#92400e;');
+      const selectedCount = isSemantic ? info.scores.filter(s => s.selected).length : 0;
+      modeBadge.innerHTML = isSemantic
+        ? `🔍 語意搜尋 ｜ 命中 ${selectedCount} 份文件 ｜ 點查看分數`
+        : `📋 全文模式 ｜ ${info.reason || '使用所有勾選文件'}`;
+      modeBadge.title = isSemantic ? '點擊查看相似度分數' : (info.reason || '');
+      if (isSemantic && info.scores) {
+        modeBadge.onclick = () => {
+          const lines = info.scores.map(s => {
+            const r = (s.score != null) ? `相關度 ${(s.score * 100).toFixed(1)}%` : '相關度 —';
+            const c = (s.cos != null) ? `｜相似度 ${(s.cos * 100).toFixed(1)}%` : '';
+            return `✅ ${s.name}　${r}${c}`;
+          }).join('\n');
+          alert(`語意搜尋結果（命中門檻：相關度 ≥ 10%　或　相似度 ≥ 60%）\n\n${lines}\n\n相關度＝重排模型分數（主要依據）；相似度＝向量餘弦。`);
+        };
+      }
+      contentDiv.appendChild(modeBadge);
+    }
+
+    // Images from matched chunks
+    if (role === 'bot' && chatMode === 'sop' && lastQueryImages && lastQueryImages.length > 0) {
+      const imgWrap = document.createElement('div');
+      imgWrap.style.cssText = 'margin-top:10px;';
+      const imgLabel = document.createElement('div');
+      imgLabel.style.cssText = 'font-size:11px;color:#64748b;font-weight:600;margin-bottom:6px;';
+      imgLabel.textContent = '📸 相關圖片';
+      imgWrap.appendChild(imgLabel);
+      const imgRow = document.createElement('div');
+      imgRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+      lastQueryImages.forEach(img => {
+        const imgEl = document.createElement('img');
+        imgEl.src = img.url;
+        imgEl.alt = img.alt || '示意圖';
+        imgEl.title = img.alt || '示意圖';
+        imgEl.style.cssText = 'max-width:220px;max-height:160px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;cursor:zoom-in;background:#f8fafc;';
+        imgEl.onclick = () => {
+          const overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+          const big = document.createElement('img');
+          big.src = img.url;
+          big.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;';
+          overlay.appendChild(big);
+          overlay.onclick = () => overlay.remove();
+          document.body.appendChild(overlay);
+        };
+        imgRow.appendChild(imgEl);
+      });
+      imgWrap.appendChild(imgRow);
+      contentDiv.appendChild(imgWrap);
+    }
+
+    // Source badge
+    if (role === 'bot') {
+      if (source && source !== '無') {
+        const sourceFiles = getSourceFile(source);
+
+        if (sourceFiles && sourceFiles.length > 0) {
+          // 每一份來源文件各做一顆可點的徽章 → 點擊開啟該文件閱讀
+          sourceFiles.forEach(file => {
+            const badge = document.createElement('a');
+            badge.className = 'source-badge';
+            badge.href = '#';
+            badge.title = '點擊開啟文件閱讀';
+            badge.innerHTML = `📄 ${escapeHtml(file.name)}`;
+            badge.onclick = (e) => { e.preventDefault(); openDocViewer(file); };
+            contentDiv.appendChild(badge);
+          });
+        } else {
+          const badge = document.createElement('span');
+          badge.className = 'source-badge none';
+          badge.innerHTML = `📄 ${escapeHtml(source)}`;
+          contentDiv.appendChild(badge);
+        }
+
+        // Update doc panel
+        updateDocPanel(sourceFiles, source, userMessage);
+      } else {
+        updateDocPanel(null, null, null);
+      }
+
+      // Follow-up chips (AI suggested questions)
+      if (followups && followups.length > 0) {
+        const chipsDiv = document.createElement('div');
+        chipsDiv.className = 'followup-chips';
+        followups.forEach(q => {
+          const chip = document.createElement('button');
+          chip.className = 'followup-chip';
+          chip.textContent = q;
+          chip.onclick = () => {
+            document.getElementById('messageInput').value = q;
+            sendMessage();
+          };
+          chipsDiv.appendChild(chip);
+        });
+        contentDiv.appendChild(chipsDiv);
+      }
+
+      // Followup ask button
+      const askBtn = document.createElement('button');
+      askBtn.className = 'followup-ask-btn';
+      askBtn.innerHTML = '💬 這裡有不懂的，繼續追問';
+      askBtn.onclick = () => {
+        const input = document.getElementById('messageInput');
+        input.focus();
+        input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+      contentDiv.appendChild(askBtn);
+    }
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(contentDiv);
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
+    return wrap;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('chatMessages');
+    const wrap = document.createElement('div');
+    wrap.className = 'message bot';
+    wrap.id = 'typingIndicator';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = '🤖';
+
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(indicator);
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  function updateDocPanel(sourceFiles, sourceName, userMessage) {
+    const body = document.getElementById('docPanelBody');
+
+    // If we have full file objects, show excerpt + link
+    if (sourceFiles && sourceFiles.length > 0) {
+      body.innerHTML = '';
+      sourceFiles.forEach(file => {
+        const excerpt = getExcerpt(file, userMessage || '');
+        const card = document.createElement('div');
+        card.className = 'doc-source-card';
+        card.style.cursor = 'pointer';
+        card.title = '點擊開啟文件閱讀';
+        card.innerHTML = `
+          <div class="doc-source-header">
+            <span>📄 ${escapeHtml(file.name)}</span>
+            <small>來源文件</small>
+          </div>
+          <div class="doc-source-excerpt">${escapeHtml(excerpt) || '（無法顯示預覽）'}</div>
+          <span class="doc-source-link">📖 開啟文件閱讀 →</span>
+        `;
+        card.onclick = () => openDocViewer(file);
+        body.appendChild(card);
+      });
+      return;
+    }
+
+    // If we only know the source name (file not found in sopFiles), show name only
+    if (sourceName && sourceName !== '無') {
+      body.innerHTML = `
+        <div class="doc-source-card">
+          <div class="doc-source-header">
+            <span>📄 ${escapeHtml(sourceName)}</span>
+            <small>來源文件</small>
+          </div>
+          <div class="doc-source-excerpt" style="color:#9ca3af;font-style:italic;">無法載入預覽</div>
+        </div>`;
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="doc-empty">
+        <div class="icon">📂</div>
+        <p>回答後這裡會顯示<br>引用的資料來源</p>
+      </div>`;
+  }
+
+  // ═══════════════════════════════════════
+  // SEND MESSAGE
+  // ═══════════════════════════════════════
+  async function sendMessage() {
+    if (isLoading) return;
+
+    const input = document.getElementById('messageInput');
+    const userMessage = input.value.trim();
+    if (!userMessage) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    setTimeout(() => { input.value = ''; input.style.height = 'auto'; }, 0);
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    if (chatMode === 'free') {
+      // ── Free chat mode: no SOP context ──
+      appendMessage('user', userMessage);
+      freeChatHistory.push({ role: 'user', content: userMessage });
+      showTyping();
+      try {
+        const result = await callFreeChat(userMessage, freeChatHistory.slice(0, -1));
+        freeChatHistory.push({ role: 'assistant', content: result });
+        removeTyping();
+        appendMessage('bot', result, null, [], userMessage);
+      } catch (e) {
+        removeTyping();
+        appendMessage('bot', `⚠️ 發生錯誤：${e.message}`, null, [], userMessage);
+      }
+    } else {
+      // ── SOP mode（串流：首字 ~8s 就出現，邊生成邊顯示）──
+      appendMessage('user', userMessage);
+      conversationHistory.push({ role: 'user', content: userMessage });
+      showTyping();
+      let liveBubble = null;
+      try {
+        const rawResponse = await callAI(userMessage, (text) => {
+          // 第一個 token 到 → 移除 typing、建立暫時的串流泡泡，之後逐步更新
+          if (!liveBubble) { removeTyping(); liveBubble = createStreamingBubble(); }
+          liveBubble.innerHTML = marked.parse(text);
+          const c = document.getElementById('chatMessages'); c.scrollTop = c.scrollHeight;
+        });
+        removeTyping();
+        if (liveBubble) { const w = liveBubble.closest('.message'); if (w) w.remove(); } // 移除暫時泡泡
+        const { answer: rawAnswer, source, followups } = parseResponse(rawResponse);
+        const answer = injectMissingUrls(rawAnswer, source, userMessage);
+        conversationHistory.push({ role: 'assistant', content: answer });
+        appendMessage('bot', answer, source, followups, userMessage); // 用正式泡泡（含來源/後續問題/徽章）
+        updateContextBar();
+      } catch (e) {
+        removeTyping();
+        if (liveBubble) { const w = liveBubble.closest('.message'); if (w) w.remove(); }
+        appendMessage('bot', `⚠️ 發生錯誤：${e.message}`, null, [], userMessage);
+      }
+    }
+
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // ═══════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════
+  updateSopStatus();
+  loadSOPs();
+  // 每 25 秒自動更新文件清單（新增/刪除文件不必手動重整）
+  setInterval(pollSopFiles, 25000);
+
+  // 審核台待審數徽章：有待審件時在按鈕上顯示數字（內網才查得到，對外失敗就靜默隱藏）
+  async function updatePendingBadge() {
+    try {
+      // 只取數字（免密碼的 count 端點），不抓任何待審內容
+      const r = await fetch('/pending/count?status=' + encodeURIComponent('待審'));
+      if (!r.ok) return;
+      const { count = 0 } = await r.json();
+      const b = document.getElementById('pendingCount');
+      if (!b) return;
+      if (count > 0) { b.textContent = count; b.style.display = 'inline-block'; }
+      else b.style.display = 'none';
+    } catch (e) { /* 對外/離線：靜默 */ }
+  }
+  updatePendingBadge();
+  setInterval(updatePendingBadge, 25000);
+
+  // ═══════════════════════════════════════
+  // PERSONAL TOOLS（localStorage only）
+  // ═══════════════════════════════════════
+
+  // ── LINKS ────────────────────────────
+  function getLinks() { return JSON.parse(localStorage.getItem('personal_links') || '[]'); }
+  function saveLinks(d) { localStorage.setItem('personal_links', JSON.stringify(d)); }
+  function openLinks() { renderLinksList(); document.getElementById('linksModal').classList.add('active'); }
+  function closeLinks() { document.getElementById('linksModal').classList.remove('active'); }
+  function renderLinksList() {
+    var links = getLinks();
+    var list = document.getElementById('linksList');
+    if (links.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:#9ca3af;font-size:13px;padding:20px 0;">尚未新增任何連結</p>';
+      return;
+    }
+    list.innerHTML = links.map(function(l) {
+      var host = '';
+      try { host = new URL(l.url).hostname; } catch(e) {}
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:8px;transition:background 0.12s;" onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'transparent\'">' +
+        '<img src="https://www.google.com/s2/favicons?sz=20&domain=' + escapeHtml(host) + '" style="width:18px;height:18px;flex-shrink:0;border-radius:3px;" onerror="this.style.display=\'none\'" />' +
+        '<a href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer" style="flex:1;text-decoration:none;color:#1a1a2e;min-width:0;">' +
+        '<div style="font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(l.name) + '</div>' +
+        '<div style="font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(l.url) + '</div>' +
+        '</a>' +
+        '<button onclick="deleteLink(\'' + l.id + '\')" style="flex-shrink:0;background:none;border:none;color:#d1d5db;font-size:15px;cursor:pointer;padding:2px 6px;border-radius:4px;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#d1d5db\'">✕</button>' +
+        '</div>';
+    }).join('');
+  }
+  function addLink() {
+    var name = document.getElementById('linkNameInput').value.trim();
+    var url = document.getElementById('linkUrlInput').value.trim();
+    if (!name || !url) { alert('請填入名稱和網址'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    var links = getLinks();
+    links.push({ id: Date.now().toString(), name: name, url: url });
+    saveLinks(links);
+    document.getElementById('linkNameInput').value = '';
+    document.getElementById('linkUrlInput').value = '';
+    renderLinksList();
+  }
+  function deleteLink(id) {
+    saveLinks(getLinks().filter(function(l) { return l.id !== id; }));
+    renderLinksList();
+  }
+
+  function openFilesPicker() { document.getElementById('filesPickerModal').classList.add('active'); }
+  function closeFilesPicker() { document.getElementById('filesPickerModal').classList.remove('active'); }
+
+  function saveActiveIds() {
+    try { localStorage.setItem('sop_active_ids', JSON.stringify([...activeFileIds])); } catch(e) {}
+  }
+
+  function removeDocFromEmbedCache(fileId) {
+    const cache = readEmbedCache();
+    let changed = false;
+    for (const key of Object.keys(cache)) {
+      if (cache[key].docId === fileId) { delete cache[key]; changed = true; }
+    }
+    if (changed) writeEmbedCache(cache);
+  }
+
+  async function toggleFileActive(fileId) {
+    const wasActive = activeFileIds.has(fileId);
+    if (wasActive) {
+      activeFileIds.delete(fileId);
+      removeDocFromEmbedCache(fileId);
+      saveActiveIds();
+      updateActiveStatus();
+      renderFilesPickerList();
+    } else {
+      activeFileIds.add(fileId);
+      saveActiveIds();
+      updateActiveStatus();
+      renderFilesPickerList();
+      // Background: build index for newly checked file
+      const file = sopFiles.find(f => f.id === fileId);
+      if (file) {
+        await ensureDocEmbedded(file);
+        renderFilesPickerList();
+      }
+    }
+  }
+
+  async function toggleAllFiles(selectAll) {
+    if (selectAll) {
+      activeFileIds = new Set(sopFiles.map(f => f.id));
+      saveActiveIds();
+      updateActiveStatus();
+      renderFilesPickerList();
+      embedAllDocs();
+    } else {
+      // Remove all index entries for all files
+      const cache = readEmbedCache();
+      for (const id of activeFileIds) {
+        for (const key of Object.keys(cache)) {
+          if (cache[key].docId === id) delete cache[key];
+        }
+      }
+      writeEmbedCache(cache);
+      activeFileIds.clear();
+      saveActiveIds();
+      updateActiveStatus();
+      renderFilesPickerList();
+    }
+  }
+
+  // 「開啟文件庫」按鈕上顯示目前選定了幾分之幾的文件
+  function updateLibraryBtn() {
+    const el = document.getElementById('filesPickerCount');
+    if (!el) return;
+    const total = sopFiles.length;
+    const active = activeFileIds.size;
+    el.textContent = `${active} / ${total}`;
+    // 配合深色側欄：用半透明色調（全選＝品牌藍、部分＝琥珀、零＝紅），低調不刺眼
+    if (total === 0)        { el.style.color = 'rgba(255,255,255,0.4)';  el.style.background = 'rgba(255,255,255,0.08)'; }
+    else if (active === 0)  { el.style.color = '#fca5a5';                el.style.background = 'rgba(239,68,68,0.16)'; }
+    else if (active < total){ el.style.color = '#fcd34d';                el.style.background = 'rgba(245,158,11,0.16)'; }
+    else                    { el.style.color = '#9ec5ff';                el.style.background = 'rgba(79,142,247,0.22)'; }
+  }
+
+  function updateActiveStatus() {
+    updateLibraryBtn();
+    const statusEl = document.getElementById('sopStatus');
+    const total = sopFiles.length;
+    const active = activeFileIds.size;
+    if (total === 0) {
+      statusEl.textContent = '未設定 API Key';
+      statusEl.className = 'sop-status';
+      return;
+    }
+    if (active === total) {
+      statusEl.textContent = `✓ 已載入 ${total} 份文件`;
+    } else if (active === 0) {
+      statusEl.textContent = `⚠ 未選取任何文件（共 ${total} 份）`;
+    } else {
+      statusEl.textContent = `✓ 使用 ${active}／${total} 份文件`;
+    }
+    statusEl.className = active > 0 ? 'sop-status loaded' : 'sop-status error';
+  }
+
+  function renderFilesPickerList() {
+    var pickerList = document.getElementById('filesPickerList');
+    if (sopFiles.length === 0) {
+      pickerList.innerHTML = '<p style="font-size:13px;color:#9ca3af;padding:16px 0;text-align:center;">資料夾目前沒有文件</p>';
+      return;
+    }
+    var allSelected = activeFileIds.size === sopFiles.length;
+    var html = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin:0 0 10px 0;font-size:12px;color:#92400e;line-height:1.6;">' +
+      '💡 <b>使用建議</b>：勾選 = 納入這次的 AI 搜尋範圍。<br>' +
+      '<span style="color:#a16207;">• 取消勾選只是「這次不搜這份」，不會刪除文件（索引由 Mac Mini 維護）</span><br>' +
+      '<span style="color:#a16207;">• 文件越聚焦，AI 搜尋越精準，回答品質越好</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px 10px;border-bottom:1px solid #f0f2f5;margin-bottom:4px;">' +
+      '<span style="font-size:11px;color:#9ca3af;">勾選 = 納入搜尋範圍</span>' +
+      '<button onclick="toggleAllFiles(' + (!allSelected) + ')" style="font-size:11px;color:#4f8ef7;background:none;border:none;cursor:pointer;font-weight:500;padding:2px 6px;">' +
+      (allSelected ? '取消全選' : '全選') + '</button></div>';
+    for (var i = 0; i < sopFiles.length; i++) {
+      var f = sopFiles[i];
+      var checked = activeFileIds.has(f.id);
+      var pinned = pinnedFileIds.has(f.id);
+      var pinStyle = pinned
+        ? 'flex-shrink:0;padding:3px 6px;border:1.5px solid #f59e0b;border-radius:6px;background:#fffbeb;font-size:12px;cursor:pointer;opacity:1;filter:none;'
+        : 'flex-shrink:0;padding:3px 6px;border:1px dashed #d1d5db;border-radius:6px;background:transparent;font-size:12px;cursor:pointer;opacity:0.35;filter:grayscale(0.7);';
+      html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:8px;' + (!checked && !pinned ? 'opacity:0.45;' : '') + '"' +
+        ' onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'transparent\'">' +
+        '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="toggleFileActive(\'' + f.id + '\')" style="width:15px;height:15px;flex-shrink:0;cursor:pointer;accent-color:#4f8ef7;" />' +
+        '<button onclick="togglePin(\'' + f.id + '\')" style="' + pinStyle + '" title="' + (pinned ? '取消常駐' : '設為常駐（每次必定注入）') + '">📌</button>' +
+        '<span style="display:flex;flex-direction:column;flex:1;padding:4px 2px;color:#1a1a2e;min-width:0;">' +
+        '<span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(f.name) + (pinned ? ' <span style="font-size:10px;color:#d97706;">常駐</span>' : '') + '</span>' +
+        '</span>' +
+        '<button onclick="openSopEditor(' + i + ')" style="flex-shrink:0;padding:4px 10px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#4f8ef7;font-size:11.5px;font-weight:500;cursor:pointer;white-space:nowrap;"' +
+        ' onmouseover="this.style.background=\'#4f8ef7\';this.style.color=\'#fff\';this.style.borderColor=\'#4f8ef7\'"' +
+        ' onmouseout="this.style.background=\'#fff\';this.style.color=\'#4f8ef7\';this.style.borderColor=\'#d1d5db\'">✏️ 編輯</button>' +
+        '<button onclick="openDeleteModal(' + i + ')" title="刪除文件" style="flex-shrink:0;padding:4px 9px;border:1px solid #fecaca;border-radius:6px;background:#fff;color:#dc2626;font-size:11.5px;font-weight:500;cursor:pointer;white-space:nowrap;"' +
+        ' onmouseover="this.style.background=\'#dc2626\';this.style.color=\'#fff\';this.style.borderColor=\'#dc2626\'"' +
+        ' onmouseout="this.style.background=\'#fff\';this.style.color=\'#dc2626\';this.style.borderColor=\'#fecaca\'">🗑️ 刪除</button>' +
+        '</div>';
+    }
+    pickerList.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── NOTES ────────────────────────────
+  let currentNoteId = null;
+
+  function openNotes() {
+    document.getElementById('notesModal').classList.add('active');
+    renderNotesList();
+  }
+  function closeNotes() {
+    document.getElementById('notesModal').classList.remove('active');
+  }
+  function getNotes() { return JSON.parse(localStorage.getItem('personal_notes') || '[]'); }
+  function saveNotesData(n) { localStorage.setItem('personal_notes', JSON.stringify(n)); }
+
+  function renderNotesList() {
+    const notes = getNotes();
+    const list = document.getElementById('notesList');
+    list.innerHTML = notes.map(n => `
+      <div class="note-item ${n.id === currentNoteId ? 'active' : ''}" onclick="selectNote('${n.id}')">
+        <div class="note-item-title">${escapeHtml(n.title || '（無標題）')}</div>
+        <div class="note-item-date">${new Date(n.updatedAt).toLocaleDateString('zh-TW')}</div>
+      </div>
+    `).join('') || '<p style="font-size:12px;color:#9ca3af;padding:12px 14px;">還沒有筆記</p>';
+    const editor = document.getElementById('notesEditor');
+    const empty = document.getElementById('notesEmptyState');
+    const found = notes.find(n => n.id === currentNoteId);
+    editor.style.display = found ? 'flex' : 'none';
+    empty.style.display = found ? 'none' : 'flex';
+  }
+  function newNote() {
+    const note = { id: Date.now().toString(), title: '', content: '', updatedAt: new Date().toISOString() };
+    const notes = getNotes();
+    notes.unshift(note);
+    saveNotesData(notes);
+    currentNoteId = note.id;
+    document.getElementById('noteTitleInput').value = '';
+    document.getElementById('noteContentInput').value = '';
+    renderNotesList();
+    document.getElementById('noteTitleInput').focus();
+  }
+  function selectNote(id) {
+    const note = getNotes().find(n => n.id === id);
+    if (!note) return;
+    currentNoteId = id;
+    document.getElementById('noteTitleInput').value = note.title;
+    document.getElementById('noteContentInput').value = note.content;
+    renderNotesList();
+  }
+  function saveNote() {
+    if (!currentNoteId) return;
+    const notes = getNotes();
+    const idx = notes.findIndex(n => n.id === currentNoteId);
+    if (idx === -1) return;
+    notes[idx].title = document.getElementById('noteTitleInput').value;
+    notes[idx].content = document.getElementById('noteContentInput').value;
+    notes[idx].updatedAt = new Date().toISOString();
+    saveNotesData(notes);
+    renderNotesList();
+  }
+  function deleteNote() {
+    if (!currentNoteId || !confirm('確定要刪除這則筆記？')) return;
+    saveNotesData(getNotes().filter(n => n.id !== currentNoteId));
+    currentNoteId = null;
+    renderNotesList();
+  }
+
+  // ── TODO & SCHEDULE ──────────────────
+  function openTodo() {
+    document.getElementById('todoModal').classList.add('active');
+    renderTodoList();
+    renderEventList();
+  }
+  function closeTodo() { document.getElementById('todoModal').classList.remove('active'); }
+  function switchTodoTab(tab) {
+    document.getElementById('todoTabBtn').classList.toggle('active', tab === 'todo');
+    document.getElementById('scheduleTabBtn').classList.toggle('active', tab === 'schedule');
+    document.getElementById('todoContent').style.display = tab === 'todo' ? 'block' : 'none';
+    document.getElementById('scheduleContent').style.display = tab === 'schedule' ? 'block' : 'none';
+  }
+  function getTodos() { return JSON.parse(localStorage.getItem('personal_todos') || '[]'); }
+  function saveTodosData(t) { localStorage.setItem('personal_todos', JSON.stringify(t)); }
+  function addTodo() {
+    const input = document.getElementById('todoInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const priority = document.getElementById('todoPriority').value;
+    const todos = getTodos();
+    todos.unshift({ id: Date.now().toString(), text, done: false, priority, createdAt: new Date().toISOString() });
+    saveTodosData(todos);
+    input.value = '';
+    setTimeout(() => { input.value = ''; }, 0);
+    renderTodoList();
+  }
+  function toggleTodo(id) {
+    const todos = getTodos().map(t => t.id === id ? { ...t, done: !t.done } : t);
+    saveTodosData(todos);
+    renderTodoList();
+  }
+  function deleteTodo(id) {
+    saveTodosData(getTodos().filter(t => t.id !== id));
+    renderTodoList();
+  }
+  function renderTodoList() {
+    const todos = getTodos();
+    const labels = { high: '高', mid: '中', low: '低' };
+    document.getElementById('todoList').innerHTML = todos.length === 0
+      ? '<p style="color:#9ca3af;font-size:13px;text-align:center;padding:32px 0;">還沒有待辦事項，輸入後按 Enter 或點新增</p>'
+      : todos.map(t => `
+        <div class="todo-item">
+          <input type="checkbox" class="todo-check" ${t.done ? 'checked' : ''} onchange="toggleTodo('${t.id}')" />
+          <span class="todo-text ${t.done ? 'done' : ''}">${escapeHtml(t.text)}</span>
+          <span class="todo-priority priority-${t.priority}">${labels[t.priority]}</span>
+          <button class="tool-btn-icon" onclick="deleteTodo('${t.id}')" title="刪除">🗑</button>
+        </div>
+      `).join('');
+  }
+  function getEvents() { return JSON.parse(localStorage.getItem('personal_events') || '[]'); }
+  function saveEventsData(e) { localStorage.setItem('personal_events', JSON.stringify(e)); }
+  function addEvent() {
+    const date = document.getElementById('eventDate').value;
+    const title = document.getElementById('eventTitle').value.trim();
+    if (!date || !title) { alert('請選擇日期並填入行程名稱'); return; }
+    const note = document.getElementById('eventNote').value.trim();
+    const events = [...getEvents(), { id: Date.now().toString(), date, title, note }];
+    events.sort((a, b) => a.date.localeCompare(b.date));
+    saveEventsData(events);
+    const titleEl = document.getElementById('eventTitle');
+    const noteEl = document.getElementById('eventNote');
+    titleEl.value = '';
+    noteEl.value = '';
+    setTimeout(() => { titleEl.value = ''; noteEl.value = ''; }, 0);
+    renderEventList();
+  }
+  function deleteEvent(id) {
+    saveEventsData(getEvents().filter(e => e.id !== id));
+    renderEventList();
+  }
+  function renderEventList() {
+    const events = getEvents();
+    document.getElementById('eventList').innerHTML = events.length === 0
+      ? '<p style="color:#9ca3af;font-size:13px;text-align:center;padding:32px 0;">還沒有行程，選擇日期後按 Enter 或點新增</p>'
+      : events.map(e => `
+        <div class="event-item">
+          <div class="event-date-badge">${e.date.slice(5).replace('-', '/')}</div>
+          <div class="event-info">
+            <div class="event-title">${escapeHtml(e.title)}</div>
+            ${e.note ? `<div class="event-note">${escapeHtml(e.note)}</div>` : ''}
+          </div>
+          <button class="tool-btn-icon" onclick="deleteEvent('${e.id}')" title="刪除">🗑</button>
+        </div>
+      `).join('');
+  }
+
+  // ── CONTACTS ─────────────────────────
+  let currentContactId = null;
+  let isNewContact = false;
+
+  function openContacts() {
+    document.getElementById('contactsModal').classList.add('active');
+    renderContactsList();
+  }
+  function closeContacts() { document.getElementById('contactsModal').classList.remove('active'); }
+  function getContacts() { return JSON.parse(localStorage.getItem('personal_contacts') || '[]'); }
+  function saveContactsData(c) { localStorage.setItem('personal_contacts', JSON.stringify(c)); }
+
+  function renderContactsList() {
+    const q = (document.getElementById('contactSearch').value || '').toLowerCase();
+    const contacts = getContacts().filter(c =>
+      !q || (c.name || '').toLowerCase().includes(q) || (c.dept || '').toLowerCase().includes(q)
+    );
+    document.getElementById('contactsList').innerHTML = contacts.length === 0
+      ? '<p style="font-size:12px;color:#9ca3af;padding:12px 14px;">沒有找到聯絡人</p>'
+      : contacts.map(c => `
+        <div class="contact-item ${c.id === currentContactId ? 'active' : ''}" onclick="selectContact('${c.id}')">
+          <div class="contact-name">${escapeHtml(c.name || '（未命名）')}</div>
+          ${c.dept ? `<div class="contact-dept">${escapeHtml(c.dept)}</div>` : ''}
+        </div>
+      `).join('');
+  }
+  function newContact() {
+    currentContactId = null;
+    isNewContact = true;
+    document.getElementById('contactsEmptyState').style.display = 'none';
+    document.getElementById('contactForm').style.display = 'block';
+    document.getElementById('deleteContactBtn').style.display = 'none';
+    ['name','dept','ext','phone','email','note'].forEach(f => {
+      const el = document.getElementById('cf-' + f);
+      if (el) el.value = '';
+    });
+    renderContactsList();
+    document.getElementById('cf-name').focus();
+  }
+  function selectContact(id) {
+    const contact = getContacts().find(c => c.id === id);
+    if (!contact) return;
+    currentContactId = id;
+    isNewContact = false;
+    document.getElementById('contactsEmptyState').style.display = 'none';
+    document.getElementById('contactForm').style.display = 'block';
+    document.getElementById('deleteContactBtn').style.display = 'inline-flex';
+    document.getElementById('cf-name').value = contact.name || '';
+    document.getElementById('cf-dept').value = contact.dept || '';
+    document.getElementById('cf-ext').value = contact.ext || '';
+    document.getElementById('cf-phone').value = contact.phone || '';
+    document.getElementById('cf-email').value = contact.email || '';
+    document.getElementById('cf-note').value = contact.note || '';
+    renderContactsList();
+  }
+  function saveContact() {
+    const name = document.getElementById('cf-name').value.trim();
+    if (!name) { alert('請填入姓名'); return; }
+    const data = {
+      id: isNewContact ? Date.now().toString() : currentContactId,
+      name,
+      dept: document.getElementById('cf-dept').value.trim(),
+      ext: document.getElementById('cf-ext').value.trim(),
+      phone: document.getElementById('cf-phone').value.trim(),
+      email: document.getElementById('cf-email').value.trim(),
+      note: document.getElementById('cf-note').value.trim(),
+    };
+    let contacts = getContacts();
+    if (isNewContact) {
+      contacts.push(data);
+      currentContactId = data.id;
+      isNewContact = false;
+      document.getElementById('deleteContactBtn').style.display = 'inline-flex';
+    } else {
+      contacts = contacts.map(c => c.id === currentContactId ? data : c);
+    }
+    saveContactsData(contacts);
+    renderContactsList();
+  }
+  function deleteContact() {
+    if (!currentContactId || !confirm('確定要刪除這筆聯絡人？')) return;
+    saveContactsData(getContacts().filter(c => c.id !== currentContactId));
+    currentContactId = null;
+    document.getElementById('contactForm').style.display = 'none';
+    document.getElementById('contactsEmptyState').style.display = 'flex';
+    renderContactsList();
+  }
+</script>
+</body>
+</html>

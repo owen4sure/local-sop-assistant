@@ -142,8 +142,9 @@ local-sop-assistant/
 ├── docs/                  # 設計文件:ARCHITECTURE / MODELS / GOVERNANCE / HEALTH_PANEL / DECISIONS
 ├── core/                  # 【基本版】知識庫本體
 │   ├── server/            # Express + better-sqlite3 + chokidar + RAG 管線
-│   ├── admin/review.html  # 審核台(含健康整理台 UI)
-│   ├── generator/         # SOP 生成器前端
+│   ├── web/index.html     # 問答聊天頁(使用者介面)
+│   ├── admin/review.html  # 審核台(含健康整理台 + 查無資料判讀分頁)
+│   ├── generator/         # SOP 生成器 + Agent-Ready 轉換器前端
 │   ├── reranker/          # 本機 reranker 小服務(Python)
 │   ├── launchd/           # macOS 常駐服務範本
 │   └── .env.example       # 所有設定項(佔位符)

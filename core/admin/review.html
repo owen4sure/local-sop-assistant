@@ -116,6 +116,7 @@
       <div class="tab" data-s="退回" onclick="switchTab('退回')">↩️ 退回區</div>
       <div class="tab" data-s="已上架" onclick="switchTab('已上架')">✅ 已上架</div>
       <div class="tab" data-s="健康" onclick="switchTab('健康')">🩺 健康整理台</div>
+      <div class="tab" data-s="查不到" onclick="switchTab('查不到')">❓ 想問卻查不到 <span id="unansN" style="display:none;background:#f59e0b;color:#fff;border-radius:9px;padding:0 7px;font-size:11px;">0</span></div>
     </div>
     <div class="wrap">
       <div class="list" id="list"></div>
@@ -175,6 +176,7 @@ async function doLogin() {
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     switchTab('待審');
+    refreshUnansBadge();
   } catch (e) {
     err.textContent = '無法連線後端：' + e.message;
   } finally { btn.disabled = false; btn.textContent = '登入'; }
@@ -199,8 +201,115 @@ function switchTab(s){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.s===s));
   const listEl=document.getElementById('list');
   if(s==='健康'){ listEl.style.display='none'; loadHealth(); return; }
+  if(s==='查不到'){ listEl.style.display='none'; loadUnanswered(); return; }
   listEl.style.display=''; document.getElementById('detail').innerHTML='<div class="empty">← 從左側選一筆投稿</div>'; loadList(true);
 }
+
+// ── 想問卻查不到（查無資料收集 + 人工判讀）──
+function fmtDate(ms){ try{ return new Date(ms).toLocaleString('zh-TW',{hour12:false}); }catch(e){ return ''; } }
+async function refreshUnansBadge(){
+  try{
+    const r=await fetch('/unanswered',{headers:{'X-Review-Password':SESS.pw}});
+    if(!r.ok) return; const {openCount=0}=await r.json();
+    const b=document.getElementById('unansN');
+    if(b){ if(openCount>0){ b.textContent=openCount; b.style.display='inline-block'; } else b.style.display='none'; }
+  }catch(e){}
+}
+async function loadUnanswered(){
+  const el=document.getElementById('detail');
+  el.innerHTML='<div class="empty">載入中…</div>';
+  let items=[];
+  try{
+    const r=await fetch('/unanswered',{headers:{'X-Review-Password':SESS.pw}});
+    if(r.status===403){ logout(); return; }
+    ({items=[]}=await r.json());
+  }catch(e){ el.innerHTML='<div class="msg err">載入失敗：'+esc(e.message)+'</div>'; return; }
+  const open=items.filter(i=>i.status==='open');
+  refreshUnansBadge();
+  let h=`<h2 style="margin:0">❓ 想問卻查不到</h2>
+    <div style="font-size:12.5px;color:#94a3b8;margin:6px 0 12px">使用者問了但系統查無資料的問題。<b style="color:#fca5a5">請點開候選文件確認裡面到底有沒有答案，再分類；不要只看有沒有候選就決定。</b>　待處理 ${open.length} 筆（已分類 ${items.length-open.length} 筆隱藏）。</div>`;
+  if(!open.length){ h+='<div class="empty" style="padding:30px 0">（目前沒有待處理的查不到問題）</div>'; el.innerHTML=h; return; }
+  h+=open.map((it,idx)=>{
+    const cands=(it.candidates||[]).map(c=>`<a href="javascript:;" onclick="openDocPreview('${esc(c)}')" style="color:#60a5fa;text-decoration:underline;margin-right:8px;">${esc(c.replace(/\.md$/,''))}</a>`).join('') || '<span style="color:#64748b">（無候選）</span>';
+    const qn=esc(it.question_norm);
+    return `<div class="card" id="uarow-${idx}" style="display:block">
+      <div class="t" style="font-size:14px">「${esc(it.question)}」</div>
+      <div class="m" style="font-size:12px;color:#94a3b8;margin:4px 0">問了 ${it.count} 次 ｜ 最後 ${fmtDate(it.lastAt)}</div>
+      <div style="font-size:12.5px;margin:6px 0"><b>可能相關文件：</b>${cands}</div>
+      <div style="display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap">
+        <input id="uasearch-${idx}" class="cmt" style="flex:1;min-width:160px" placeholder="搜整個知識庫確認有沒有…">
+        <button class="b-ghost" onclick="doKbSearch(${idx})">🔍 搜整個庫</button>
+      </div>
+      <div id="uaresult-${idx}" style="font-size:12px;color:#cbd5e1;margin:4px 0"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="b-ok" onclick="classifyUnans('${qn}',${idx},'has_doc')">📄 有寫·沒抓到</button>
+        <button class="b-reject" onclick="classifyUnans('${qn}',${idx},'no_doc')">✍️ 沒寫·要補</button>
+        <button class="b-ghost" onclick="classifyUnans('${qn}',${idx},'ignore')">🚫 忽略</button>
+        <button class="b-ghost" onclick="reaskUnans('${esc(it.question)}',${idx})">🔁 重問這題</button>
+      </div>
+      <div class="msg" id="uamsg-${idx}"></div>
+    </div>`;
+  }).join('');
+  el.innerHTML=h;
+}
+async function openDocPreview(name){
+  const el=document.getElementById('detail');
+  const back=el.innerHTML;
+  try{
+    const r=await fetch('/doc/'+encodeURIComponent(name),{headers:{'X-Review-Password':SESS.pw}});
+    if(r.status===403){ logout(); return; }
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||r.status);
+    el.innerHTML=`<button class="b-ghost" onclick="loadUnanswered()">← 返回清單</button>
+      <h3 style="margin:8px 0">${esc(d.name)}</h3>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:6px">讀完內容判斷：裡面有沒有回答得了那個問題？有→「有寫·沒抓到」；沒有→「沒寫·要補」。</div>
+      <pre class="md" style="white-space:pre-wrap;max-height:60vh;overflow:auto">${esc(d.content)}</pre>`;
+  }catch(e){ alert('開啟文件失敗：'+e.message); }
+}
+async function doKbSearch(idx){
+  const q=document.getElementById('uasearch-'+idx).value.trim();
+  const out=document.getElementById('uaresult-'+idx);
+  if(!q){ out.textContent=''; return; }
+  out.textContent='搜尋中…';
+  try{
+    const r=await fetch('/search?q='+encodeURIComponent(q),{headers:{'X-Review-Password':SESS.pw}});
+    if(r.status===403){ logout(); return; }
+    const d=await r.json();
+    if(!d.hits.length){ out.innerHTML='<span style="color:#fca5a5">整個庫都沒有含「'+esc(q)+'」的文件 → 多半是「沒寫·要補」</span>'; return; }
+    out.innerHTML='庫裡命中：'+d.hits.map(hh=>`<a href="javascript:;" onclick="openDocPreview('${esc(hh.name)}')" style="color:#60a5fa;text-decoration:underline;margin-right:8px;">${esc(hh.name.replace(/\.md$/,''))}</a>`).join('');
+  }catch(e){ out.textContent='搜尋失敗：'+e.message; }
+}
+async function classifyUnans(qn,idx,label){
+  const labels={has_doc:'有寫·沒抓到（之後修搜尋）',no_doc:'沒寫·要補 SOP',ignore:'忽略（本不該答）'};
+  if(!confirm('確定分類為「'+labels[label]+'」？')) return;
+  const msg=document.getElementById('uamsg-'+idx);
+  try{
+    const r=await fetch('/unanswered/classify',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Password':SESS.pw},body:JSON.stringify({question_norm:qn,label})});
+    if(r.status===403){ logout(); return; }
+    const d=await r.json(); if(!r.ok) throw new Error(d.error||r.status);
+    const row=document.getElementById('uarow-'+idx); if(row) row.style.display='none';
+    refreshUnansBadge();
+    if(label==='no_doc' && confirm('已標記「要補」。要現在去建立這份 SOP 嗎？（開生成器）')) window.open('/sop-generator.html','_blank');
+  }catch(e){ msg.className='msg err'; msg.textContent='❌ '+e.message; }
+}
+async function reaskUnans(question,idx){
+  const msg=document.getElementById('uamsg-'+idx);
+  msg.className='msg'; msg.textContent='重問中…';
+  try{
+    const r=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:question,sessionId:'review-reask'})});
+    const d=await r.json();
+    const found=(d.sources&&d.sources.length>0);
+    if(found){
+      msg.className='msg ok'; msg.innerHTML='✅ 現在找得到了！來源：'+esc(d.sources.join('、'))+'　→ 已標 done';
+      await fetch('/unanswered/classify',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Password':SESS.pw},body:JSON.stringify({question_norm:normQ(question),label:'done'})});
+      const row=document.getElementById('uarow-'+idx); if(row) setTimeout(()=>{row.style.display='none';refreshUnansBadge();},1500);
+    } else {
+      msg.className='msg err'; msg.textContent='⚠ 還是查無資料（補的 SOP 還沒生效 / 搜尋還沒修好）';
+    }
+  }catch(e){ msg.className='msg err'; msg.textContent='❌ '+e.message; }
+}
+// 與後端 normQuestion 對齊（重問回測標 done 用）
+function normQ(q){ return String(q||'').toLowerCase().replace(/[\s　、，,．。｡；;：:|/\\！？!?（）()【】「」『』《》~～\-_]/g,'').trim(); }
 
 // ── 文件健康整理台（唯讀；同頁同密碼）──
 async function loadHealth(){
@@ -564,7 +673,7 @@ async function act(id, kind){
 setInterval(() => {
   if (!SESS.pw) return;                                   // 未登入不抓
   if (document.getElementById('app').style.display === 'none') return;
-  if (CUR === '健康') return;                              // 健康整理台不走清單輪詢
+  if (CUR === '健康' || CUR === '查不到') return;           // 健康/查不到 不走清單輪詢
   loadList(false);                                        // 非 force：簽章相同就不重畫
 }, 25000);
 </script>

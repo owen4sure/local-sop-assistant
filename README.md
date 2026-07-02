@@ -142,8 +142,9 @@ local-sop-assistant/
 ├── docs/                  # design docs: ARCHITECTURE / MODELS / GOVERNANCE / HEALTH_PANEL / DECISIONS
 ├── core/                  # [Core] the knowledge base itself
 │   ├── server/            # Express + better-sqlite3 + chokidar + the RAG pipeline
-│   ├── admin/review.html  # review console (incl. health panel UI)
-│   ├── generator/         # SOP generator front-end
+│   ├── web/index.html     # Q&A chat page (end-user interface)
+│   ├── admin/review.html  # review console (incl. health panel + unanswered-questions tab)
+│   ├── generator/         # SOP generator + Agent-Ready converter front-ends
 │   ├── reranker/          # local reranker micro-service (Python)
 │   ├── launchd/           # macOS always-on service templates
 │   └── .env.example       # every config knob (placeholders)

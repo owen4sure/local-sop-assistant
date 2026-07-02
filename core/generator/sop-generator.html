@@ -1763,7 +1763,7 @@ function renderAiTopicStep() {
     </div>
     <div class="form-group">
       <label>你想記錄什麼？</label>
-      <div class="form-hint">用一兩句話描述，例如：「eHRD 是什麼、在哪裡開啟」、「公司信箱的申請和使用方式」</div>
+      <div class="form-hint">用一兩句話描述，例如：「OO系統是什麼、在哪裡開啟」、「公司信箱的申請和使用方式」</div>
       <textarea id="aiTopicInput" class="form-input" rows="3" placeholder="例如：差旅費請款的申請流程和注意事項">${esc(aiData.topic)}</textarea>
     </div>
     <div style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
@@ -2186,7 +2186,7 @@ function isPublicAccess() { return PUBLIC_HOSTNAMES.includes(location.hostname);
 
 async function uploadToDrive() {
   if (isPublicAccess()) {
-    showUploadMsg('⚠ 新增/儲存文件僅限公司內網。請連公司網路（用 http://&lt;Mac-Mini-IP&gt;:<PORT> 開啟）後再儲存。', true);
+    showUploadMsg('⚠ 新增/儲存文件僅限公司內網。請連公司網路（用 http://&lt;Mac-Mini-IP&gt;:3345 開啟）後再儲存。', true);
     return;
   }
   const btn = document.getElementById('uploadBtn');
